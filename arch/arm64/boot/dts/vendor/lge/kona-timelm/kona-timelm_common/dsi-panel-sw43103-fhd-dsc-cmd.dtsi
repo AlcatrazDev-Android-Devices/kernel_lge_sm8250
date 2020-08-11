@@ -48,6 +48,7 @@
 		qcom,mdss-dsi-tx-eot-append;
 		qcom,ulps-enabled;
 		qcom,suspend-ulps-enabled;
+		qcom,panel-allow-phy-poweroff;
 		qcom,null-insertion-enabled;
 
 		qcom,mdss-dsi-panel-hdr-enabled;
