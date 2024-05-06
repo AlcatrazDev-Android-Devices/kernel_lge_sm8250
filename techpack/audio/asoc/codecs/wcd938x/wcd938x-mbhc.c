@@ -509,12 +509,21 @@ static void wcd938x_wcd_mbhc_calc_impedance(struct wcd_mbhc *mbhc, uint32_t *zl,
 	int32_t z1L, z1R, z1Ls;
 	int zMono, z_diff1, z_diff2;
 	bool is_fsm_disable = false;
+#ifdef CONFIG_MACH_LGE
+        struct wcd938x_mbhc_zdet_param zdet_param[] = {
+                {4, 0, 4, 0x08, 0x14, 0x18}, /* < 32ohm */
+                {2, 0, 3, 0x18, 0x7C, 0x90}, /* 32ohm < Z < 400ohm */
+                {1, 4, 5, 0x18, 0x7C, 0x90}, /* 400ohm < Z < 1200ohm */
+                {2, 0, 3, 0x18, 0x7C, 0x90}, /* >1200ohm */
+        };
+#else
 	struct wcd938x_mbhc_zdet_param zdet_param[] = {
 		{4, 0, 4, 0x08, 0x14, 0x18}, /* < 32ohm */
 		{2, 0, 3, 0x18, 0x7C, 0x90}, /* 32ohm < Z < 400ohm */
 		{1, 4, 5, 0x18, 0x7C, 0x90}, /* 400ohm < Z < 1200ohm */
 		{1, 6, 7, 0x18, 0x7C, 0x90}, /* >1200ohm */
 	};
+#endif
 	struct wcd938x_mbhc_zdet_param *zdet_param_ptr = NULL;
 	s16 d1_a[][4] = {
 		{0, 30, 90, 30},
@@ -685,6 +694,12 @@ zdet_complete:
 	if (is_fsm_disable)
 		regmap_update_bits(wcd938x->regmap,
 				   WCD938X_ANA_MBHC_ELECT, 0x80, 0x80);
+
+#ifdef CONFIG_MACH_LGE
+    regmap_update_bits(wcd938x->regmap,
+           WCD938X_HPH_SURGE_HPHLR_SURGE_EN, 0xC0, 0x00);
+#endif
+
 }
 
 static void wcd938x_mbhc_gnd_det_ctrl(struct snd_soc_component *component,
@@ -1108,6 +1123,10 @@ int wcd938x_mbhc_init(struct wcd938x_mbhc **mbhc,
 				   ARRAY_SIZE(impedance_detect_controls));
 	snd_soc_add_component_controls(component, hph_type_detect_controls,
 				   ARRAY_SIZE(hph_type_detect_controls));
+
+#if defined(CONFIG_MACH_LITO_CAYMANLM) || defined(CONFIG_MACH_LITO_ACELM) || defined(CONFIG_MACH_LITO_MIXLM)
+	snd_soc_component_write(component, WCD938X_MICB2_TEST_CTL_3, 0xA4);
+#endif
 
 	return 0;
 err:

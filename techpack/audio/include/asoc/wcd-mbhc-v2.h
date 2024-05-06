@@ -9,6 +9,10 @@
 #include <linux/power_supply.h>
 #include "wcdcal-hwdep.h"
 #include <sound/jack.h>
+#ifdef CONFIG_MACH_LGE
+#include <linux/extcon.h>
+#include "../../../../../../kernel/msm-4.19/drivers/extcon/extcon.h"
+#endif
 
 #define TOMBAK_MBHC_NC	0
 #define TOMBAK_MBHC_NO	1
@@ -133,7 +137,11 @@ do {                                                    \
 #define HS_DETECT_PLUG_TIME_MS (3 * 1000)
 #define SPECIAL_HS_DETECT_TIME_MS (2 * 1000)
 #define MBHC_BUTTON_PRESS_THRESHOLD_MIN 250
+#ifdef CONFIG_SND_USE_MBHC_EXTN_CABLE
+#define GND_MIC_SWAP_THRESHOLD 2
+#else
 #define GND_MIC_SWAP_THRESHOLD 4
+#endif
 #define GND_MIC_USBC_SWAP_THRESHOLD 2
 #define WCD_FAKE_REMOVAL_MIN_PERIOD_MS 100
 #define HS_VREF_MIN_VAL 1400
@@ -616,6 +624,24 @@ struct wcd_mbhc {
 	bool force_linein;
 	struct device_node *fsa_np;
 	struct notifier_block fsa_nb;
+#ifdef CONFIG_MACH_LGE
+	struct extcon_dev *edev;
+	char edev_name[15];
+	bool LGE_HIGH_HPH_HEADSET;
+	bool ess_hifi_exception;
+#if defined(CONFIG_SND_LGE_VOC_MUTE_DET)
+    struct extcon_dev* edev_voc_mute;
+#endif /* CONFIG_SND_LGE_VOC_MUTE_DET */
+
+#if defined(CONFIG_SND_LGE_VOICE_BOKEH)
+    struct extcon_dev* edev_voice_bokeh;
+#endif /* CONFIG_SND_LGE_VOICE_BOKEH */
+
+#ifdef CONFIG_SND_USE_MBHC_EXTN_CABLE
+	bool extn_cable;
+	bool extn_exception;
+#endif
+#endif
 };
 
 void wcd_mbhc_find_plug_and_report(struct wcd_mbhc *mbhc,
