@@ -5903,7 +5903,11 @@ static struct snd_soc_dai_driver msm_dai_q6_mi2s_dai[] = {
 				 SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 |
 				 SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000 |
 				 SNDRV_PCM_RATE_192000,
+#ifdef CONFIG_SND_SMARTPA_AW882XX
+			.formats = SNDRV_PCM_FMTBIT_S32_LE,
+#else
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+#endif
 			.rate_min =     8000,
 			.rate_max =     192000,
 		},
@@ -5915,7 +5919,11 @@ static struct snd_soc_dai_driver msm_dai_q6_mi2s_dai[] = {
 				 SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 |
 				 SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000 |
 				 SNDRV_PCM_RATE_192000,
+#ifdef CONFIG_SND_SMARTPA_AW882XX
+			.formats = SNDRV_PCM_FMTBIT_S32_LE,
+#else
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+#endif
 			.rate_min =     8000,
 			.rate_max =     192000,
 		},
