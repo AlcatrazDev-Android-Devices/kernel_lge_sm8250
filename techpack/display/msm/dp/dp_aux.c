@@ -564,6 +564,27 @@ end:
 	return ret;
 }
 
+#if defined(CONFIG_LGE_DISPLAY_COMMON)
+void dp_aux_set_cfg(struct drm_dp_aux *drm_aux, u32 index)
+{
+	struct dp_aux_private *aux = container_of(drm_aux,
+		struct dp_aux_private, drm_aux);
+
+	aux->catalog->change_aux_cfg(aux->catalog,
+		aux->cfg, PHY_AUX_CFG1, index);
+}
+
+void dp_aux_set_recfg(struct drm_dp_aux *drm_aux)
+{
+	struct dp_aux_private *aux = container_of(drm_aux,
+		struct dp_aux_private, drm_aux);
+
+	aux->catalog->update_aux_cfg(aux->catalog,
+		aux->cfg, PHY_AUX_CFG1);
+	aux->catalog->reset(aux->catalog);
+}
+#endif
+
 /*
  * This function does the real job to process an AUX transaction.
  * It will call aux_reset() function to reset the AUX channel,
@@ -799,10 +820,11 @@ static int dp_aux_configure_aux_switch(struct dp_aux *dp_aux,
 
 	DP_DEBUG("enable=%d, orientation=%d, event=%d\n",
 			enable, orientation, event);
-
+#if !defined(CONFIG_LGE_DISPLAY_COMMON)
 	rc = fsa4480_switch_event(aux->aux_switch_node, event);
 	if (rc)
 		DP_ERR("failed to configure fsa4480 i2c device (%d)\n", rc);
+#endif
 end:
 	return rc;
 }
@@ -851,6 +873,10 @@ struct dp_aux *dp_aux_get(struct device *dev, struct dp_catalog_aux *catalog,
 	dp_aux->dpcd_updated = dp_aux_dpcd_updated;
 	dp_aux->set_sim_mode = dp_aux_set_sim_mode;
 	dp_aux->aux_switch = dp_aux_configure_aux_switch;
+#if defined(CONFIG_LGE_DISPLAY_COMMON)
+	dp_aux->set_cfg = dp_aux_set_cfg;
+	dp_aux->set_recfg = dp_aux_set_recfg;
+#endif
 
 	return dp_aux;
 error:

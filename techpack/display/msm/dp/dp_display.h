@@ -12,6 +12,13 @@
 #include <drm/msm_drm.h>
 
 #include "dp_panel.h"
+#if defined(CONFIG_LGE_DUAL_SCREEN)
+#include <linux/extcon.h>
+#define EXT_DD_MAX_COUNT 3
+#endif
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+#include "../lge/dp/lge_dp_def.h"
+#endif
 
 #define DP_MST_SIM_MAX_PORTS	8
 
@@ -132,7 +139,19 @@ struct dp_display {
 			bool wakeup);
 	int (*get_display_type)(struct dp_display *dp_display,
 			const char **display_type);
+
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	struct lge_dp_display lge_dp;
+#endif
 };
+
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+int dp_display_external_block(struct lge_dp_display *lge_dp, int block);
+int dp_display_send_id_event(struct lge_dp_display *lge_dp);
+#endif
+#if defined(CONFIG_LGE_DUAL_SCREEN)
+int is_dd_connected(void);
+#endif
 
 #ifdef CONFIG_DRM_MSM_DP
 int dp_display_get_num_of_displays(void);

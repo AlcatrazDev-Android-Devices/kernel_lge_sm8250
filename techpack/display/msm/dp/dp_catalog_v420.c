@@ -9,6 +9,10 @@
 #include "dp_catalog.h"
 #include "dp_reg.h"
 #include "dp_debug.h"
+#if defined(CONFIG_LGE_DUAL_SCREEN)
+#include <linux/lge_ds3.h>
+#include <soc/qcom/lge/board_lge.h>
+#endif
 
 #define dp_catalog_get_priv_v420(x) ({ \
 	struct dp_catalog *catalog; \
@@ -29,47 +33,90 @@
 #define MAX_VOLTAGE_LEVELS 4
 #define MAX_PRE_EMP_LEVELS 4
 
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+extern struct lge_dp_display* get_lge_dp(void);
+#endif
+
 static u8 const vm_pre_emphasis[MAX_VOLTAGE_LEVELS][MAX_PRE_EMP_LEVELS] = {
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	{0x0B, 0x0F, 0x14, 0xFF},       /* pe0, 2.1 db */
+	{0x0B, 0x0F, 0x12, 0xFF},       /* pe1, 2.9 db */
+	{0x0B, 0x0F, 0xFF, 0xFF},       /* pe2, 6.0 db */
+#else
 	{0x00, 0x0E, 0x16, 0xFF},       /* pe0, 0 db */
 	{0x00, 0x0E, 0x16, 0xFF},       /* pe1, 3.5 db */
 	{0x00, 0x0E, 0xFF, 0xFF},       /* pe2, 6.0 db */
+#endif
 	{0xFF, 0xFF, 0xFF, 0xFF}        /* pe3, 9.5 db */
 };
 
 /* voltage swing, 0.2v and 1.0v are not support */
 static u8 const vm_voltage_swing[MAX_VOLTAGE_LEVELS][MAX_PRE_EMP_LEVELS] = {
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	{0x08, 0x10, 0x17, 0xFF}, /* sw0, 0.4v  */
+	{0x12, 0x1F, 0x1F, 0xFF}, /* sw1, 0.6 v */
+#else
 	{0x07, 0x0F, 0x16, 0xFF}, /* sw0, 0.4v  */
 	{0x11, 0x1E, 0x1F, 0xFF}, /* sw1, 0.6 v */
+#endif
 	{0x1A, 0x1F, 0xFF, 0xFF}, /* sw1, 0.8 v */
 	{0xFF, 0xFF, 0xFF, 0xFF}  /* sw1, 1.2 v, optional */
 };
 
 static u8 const dp_pre_emp_hbr2_hbr3[MAX_VOLTAGE_LEVELS][MAX_PRE_EMP_LEVELS] = {
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	{0x0B, 0x0F, 0x14, 0xFF},       /* pe0, 2.1 db */
+	{0x0B, 0x0F, 0x12, 0xFF},       /* pe1, 2.9 db */
+	{0x0B, 0x0F, 0xFF, 0xFF},       /* pe2, 6.0 db */
+	{0xFF, 0xFF, 0xFF, 0xFF}        /* pe3, 9.5 db */
+#else
 	{0x00, 0x0C, 0x15, 0x1A}, /* pe0, 0 db */
 	{0x02, 0x0E, 0x16, 0xFF}, /* pe1, 3.5 db */
 	{0x02, 0x11, 0xFF, 0xFF}, /* pe2, 6.0 db */
 	{0x04, 0xFF, 0xFF, 0xFF}  /* pe3, 9.5 db */
+#endif
 };
 
 static u8 const dp_swing_hbr2_hbr3[MAX_VOLTAGE_LEVELS][MAX_PRE_EMP_LEVELS] = {
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	{0x08, 0x10, 0x17, 0xFF}, /* sw0, 0.4v  */
+	{0x12, 0x1F, 0x1F, 0xFF}, /* sw1, 0.6 v */
+	{0x1B, 0x1F, 0xFF, 0xFF}, /* sw1, 0.8 v */
+	{0xFF, 0xFF, 0xFF, 0xFF}  /* sw1, 1.2 v, optional */
+#else
 	{0x02, 0x12, 0x16, 0x1A}, /* sw0, 0.4v  */
 	{0x09, 0x19, 0x1F, 0xFF}, /* sw1, 0.6v */
 	{0x10, 0x1F, 0xFF, 0xFF}, /* sw1, 0.8v */
 	{0x1F, 0xFF, 0xFF, 0xFF}  /* sw1, 1.2v */
+#endif
 };
 
 static u8 const dp_pre_emp_hbr_rbr[MAX_VOLTAGE_LEVELS][MAX_PRE_EMP_LEVELS] = {
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	{0x0B, 0x0F, 0x14, 0xFF},       /* pe0, 2.1 db */
+	{0x0B, 0x0F, 0x12, 0xFF},       /* pe1, 2.9 db */
+	{0x0B, 0x0F, 0xFF, 0xFF},       /* pe2, 6.0 db */
+	{0xFF, 0xFF, 0xFF, 0xFF}        /* pe3, 9.5 db */
+#else
 	{0x00, 0x0E, 0x15, 0x1A}, /* pe0, 0 db */
 	{0x00, 0x0E, 0x15, 0xFF}, /* pe1, 3.5 db */
 	{0x00, 0x0E, 0xFF, 0xFF}, /* pe2, 6.0 db */
 	{0x04, 0xFF, 0xFF, 0xFF}  /* pe3, 9.5 db */
+#endif
 };
 
 static u8 const dp_swing_hbr_rbr[MAX_VOLTAGE_LEVELS][MAX_PRE_EMP_LEVELS] = {
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	{0x08, 0x10, 0x17, 0xFF}, /* sw0, 0.4v  */
+	{0x12, 0x1F, 0x1F, 0xFF}, /* sw1, 0.6 v */
+	{0x1B, 0x1F, 0xFF, 0xFF}, /* sw1, 0.8 v */
+	{0xFF, 0xFF, 0xFF, 0xFF}  /* sw1, 1.2 v, optional */
+#else
 	{0x08, 0x0F, 0x16, 0x1F}, /* sw0, 0.4v */
 	{0x11, 0x1E, 0x1F, 0xFF}, /* sw1, 0.6v */
 	{0x16, 0x1F, 0xFF, 0xFF}, /* sw1, 0.8v */
 	{0x1F, 0xFF, 0xFF, 0xFF}  /* sw1, 1.2v */
+#endif
 };
 
 struct dp_catalog_private_v420 {
@@ -236,13 +283,18 @@ static void dp_catalog_ctrl_update_vx_px_v420(struct dp_catalog_ctrl *ctrl,
 	struct dp_io_data *io_data;
 	u8 value0, value1;
 	u32 version;
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	struct lge_dp_display *lge_dp = get_lge_dp();
+#endif
+#if IS_ENABLED(CONFIG_LGE_DUAL_SCREEN)
+	u8 value2;
+#endif
 
 	if (!ctrl || !((v_level < MAX_VOLTAGE_LEVELS)
 		&& (p_level < MAX_PRE_EMP_LEVELS))) {
 		DP_ERR("invalid input\n");
 		return;
 	}
-
 	DP_DEBUG("hw: v=%d p=%d, high=%d\n", v_level, p_level, high);
 
 	catalog = dp_catalog_get_priv_v420(ctrl);
@@ -265,6 +317,24 @@ static void dp_catalog_ctrl_update_vx_px_v420(struct dp_catalog_ctrl *ctrl,
 		value0 = vm_voltage_swing[v_level][p_level];
 		value1 = vm_pre_emphasis[v_level][p_level];
 	}
+#if IS_ENABLED(CONFIG_LGE_DUAL_SCREEN)
+	if (is_ds_connected()) {
+		value0 = 0x10; // swing level : 557.5 mV
+		value1 = 0x0B; // post emp : -2.6 dB
+		value2 = 0x00; // pre emp : 0.0 dB
+	}
+	pr_err("[drm-dp] value0 0x%0x, value1 0x%0x, value2 0x%0x\n",
+			value0, value1, value2);
+#endif
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	if(lge_dp->tuning_enable) {
+		value0 = lge_dp->tuning_swing_value;
+		value1 = lge_dp->tuning_pre_emp;
+	}
+	pr_err("[drm-dp] value0 0x%0x, value1 0x%0x\n",
+			value0, value1);
+#endif
+
 
 	/* program default setting first */
 	io_data = catalog->io->dp_ln_tx0;
@@ -278,16 +348,27 @@ static void dp_catalog_ctrl_update_vx_px_v420(struct dp_catalog_ctrl *ctrl,
 	/* Enable MUX to use Cursor values from these registers */
 	value0 |= BIT(5);
 	value1 |= BIT(5);
+#if IS_ENABLED(CONFIG_LGE_DUAL_SCREEN)
+	value2 |= BIT(5);
+#endif
 
 	/* Configure host and panel only if both values are allowed */
 	if (value0 != 0xFF && value1 != 0xFF) {
 		io_data = catalog->io->dp_ln_tx0;
 		dp_write(TXn_TX_DRV_LVL_V420, value0);
 		dp_write(TXn_TX_EMP_POST1_LVL, value1);
+#if IS_ENABLED(CONFIG_LGE_DUAL_SCREEN)
+		if (is_ds_connected())
+			dp_write(0x108, value2);
+#endif
 
 		io_data = catalog->io->dp_ln_tx1;
 		dp_write(TXn_TX_DRV_LVL_V420, value0);
 		dp_write(TXn_TX_EMP_POST1_LVL, value1);
+#if IS_ENABLED(CONFIG_LGE_DUAL_SCREEN)
+		if (is_ds_connected())
+			dp_write(0x108, value2);
+#endif
 
 		DP_DEBUG("hw: vx_value=0x%x px_value=0x%x\n",
 			value0, value1);

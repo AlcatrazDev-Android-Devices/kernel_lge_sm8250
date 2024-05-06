@@ -2,6 +2,7 @@
 ccflags-y := -I$(srctree)/include/drm -I$(srctree)/techpack/display/msm -I$(srctree)/techpack/display/msm/dsi -I$(srctree)/techpack/display/msm/dp
 ccflags-y += -I$(srctree)/techpack/display/msm/sde
 ccflags-y += -I$(srctree)/techpack/display/rotator
+ccflags-$(CONFIG_LGE_PM_PRM) += -Idrivers/soc/qcom/lge/power
 
 msm_drm-$(CONFIG_DRM_MSM_DP) += dp/dp_usbpd.o \
 	dp/dp_parser.o \
@@ -114,6 +115,8 @@ msm_drm-$(CONFIG_DRM_MSM) += \
 	msm_smmu.o \
 	msm_prop.o \
 	msm_notifier.o\
+
+obj-$(CONFIG_LGE_DISPLAY_COMMON) += lge/
 
 obj-$(CONFIG_DRM_MSM)	+= msm_drm.o
 
