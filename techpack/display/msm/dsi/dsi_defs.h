@@ -443,6 +443,9 @@ struct dsi_mode_info {
 	bool dsc_enabled;
 	struct msm_display_dsc_info *dsc;
 	struct msm_roi_caps roi_caps;
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_COMMON)
+	u32 refresh_rate_div;
+#endif
 };
 
 /**

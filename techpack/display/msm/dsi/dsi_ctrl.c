@@ -3210,6 +3210,14 @@ int dsi_ctrl_cmd_transfer(struct dsi_ctrl *dsi_ctrl,
 
 	mutex_lock(&dsi_ctrl->ctrl_lock);
 
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_COMMON)
+	if (((msg->flags) & MIPI_DSI_MSG_REQ_ACK) &&
+			(msg->rx_buf && (msg->rx_len > 0)))
+	{
+		*flags |= DSI_CTRL_CMD_READ;
+	}
+#endif
+
 	rc = dsi_ctrl_check_state(dsi_ctrl, DSI_CTRL_OP_CMD_TX, 0x0);
 	if (rc) {
 		DSI_CTRL_ERR(dsi_ctrl, "Controller state check failed, rc=%d\n",
