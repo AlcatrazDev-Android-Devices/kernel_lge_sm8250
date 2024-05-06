@@ -288,8 +288,14 @@ static int wcd938x_slave_bind(struct device *dev,
 	}
 
 	do {
+#ifdef CONFIG_MACH_KONA_TIMELM
+		/* Call usleep_range() only on retry */
+		if(ret)
+			usleep_range(100, 110);
+#else
 		/* Add delay for soundwire enumeration */
 		usleep_range(100, 110);
+#endif
 		ret = swr_get_logical_dev_num(pdev, pdev->addr, &devnum);
 	} while (ret && --retry);
 

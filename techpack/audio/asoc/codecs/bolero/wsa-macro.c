@@ -3182,13 +3182,14 @@ static int wsa_macro_probe(struct platform_device *pdev)
 			__func__);
 		return -EINVAL;
 	}
+#ifndef CONFIG_MACH_LGE
 	if (msm_cdc_pinctrl_get_state(wsa_priv->wsa_swr_gpio_p) < 0 &&
 			is_used_wsa_swr_gpio) {
 		dev_err(&pdev->dev, "%s: failed to get swr pin state\n",
 			__func__);
 		return -EPROBE_DEFER;
 	}
-
+#endif
 	wsa_io_base = devm_ioremap(&pdev->dev,
 				   wsa_base_addr, WSA_MACRO_MAX_OFFSET);
 	if (!wsa_io_base) {

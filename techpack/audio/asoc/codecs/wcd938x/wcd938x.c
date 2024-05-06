@@ -1976,8 +1976,14 @@ static int wcd938x_get_logical_addr(struct swr_device *swr_dev)
 	int num_retry = NUM_ATTEMPTS;
 
 	do {
+#ifdef CONFIG_MACH_KONA_TIMELM
+		/* Call usleep_range() only on retry */
+		if(ret)
+			usleep_range(1000, 1010);
+#else
 		/* retry after 1ms */
 		usleep_range(1000, 1010);
+#endif
 		ret = swr_get_logical_dev_num(swr_dev, swr_dev->addr, &devnum);
 	} while (ret && --num_retry);
 	if (ret)
