@@ -6545,13 +6545,15 @@ static int cam_ife_mgr_cmd(void *hw_mgr_priv, void *cmd_args)
 		if (ctx->last_dump_flush_req_id == ctx->applied_req_id)
 			return 0;
 
+		CAM_ERR(CAM_ISP, "config done completion start");
 		rem_jiffies = wait_for_completion_timeout(
 			&ctx->config_done_complete,
-			msecs_to_jiffies(30));
+			msecs_to_jiffies(200)); /*LGE_CHANGE, 30->200 to fix outfocus flush timeout, hyunuk.park@lge.com*/
 		if (rem_jiffies == 0)
 			CAM_ERR(CAM_ISP,
 				"config done completion timeout, Reg dump will be unreliable ctx_index %d",
 				ctx->ctx_index);
+		CAM_ERR(CAM_ISP, "config done completion end");
 
 		ctx->last_dump_flush_req_id = ctx->applied_req_id;
 		rc = cam_ife_mgr_handle_reg_dump(ctx, ctx->reg_dump_buf_desc,

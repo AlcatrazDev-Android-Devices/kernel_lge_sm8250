@@ -229,6 +229,10 @@ struct cci_device {
 	bool is_burst_read;
 	uint32_t irqs_disabled;
 	struct mutex init_mutex;
+#ifdef CONFIG_MACH_LGE
+    struct mutex global_mutex;
+    struct completion sensor_complete;
+#endif
 };
 
 enum cam_cci_i2c_cmd_type {

@@ -9,6 +9,12 @@
 #include "cam_ois_core.h"
 #include "cam_debug_util.h"
 
+
+#ifdef CONFIG_MACH_LGE
+extern void oeis_create_sysfs(void);
+extern void oeis_destroy_sysfs(void);
+#endif
+
 static long cam_ois_subdev_ioctl(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
 {
@@ -224,6 +230,13 @@ static int cam_ois_i2c_driver_probe(struct i2c_client *client,
 	if (rc)
 		goto soc_free;
 
+
+#ifdef CONFIG_MACH_LGE
+	spin_lock_init(&o_ctrl->gyro_lock);
+	oeis_create_sysfs();
+	o_ctrl->ois_thread_running = false;
+#endif
+
 	o_ctrl->cam_ois_state = CAM_OIS_INIT;
 	o_ctrl->open_cnt = 0;
 
@@ -249,6 +262,10 @@ static int cam_ois_i2c_driver_remove(struct i2c_client *client)
 		CAM_ERR(CAM_OIS, "ois device is NULL");
 		return -EINVAL;
 	}
+
+#ifdef CONFIG_MACH_LGE
+	oeis_destroy_sysfs();
+#endif
 
 	CAM_INFO(CAM_OIS, "i2c driver remove invoked");
 	soc_info = &o_ctrl->soc_info;
@@ -327,6 +344,13 @@ static int32_t cam_ois_platform_driver_probe(
 	o_ctrl->bridge_intf.device_hdl = -1;
 
 	platform_set_drvdata(pdev, o_ctrl);
+
+#ifdef CONFIG_MACH_LGE
+	spin_lock_init(&o_ctrl->gyro_lock);
+	oeis_create_sysfs();
+	o_ctrl->ois_thread_running = false;
+#endif
+
 	o_ctrl->cam_ois_state = CAM_OIS_INIT;
 	o_ctrl->open_cnt = 0;
 
@@ -355,6 +379,10 @@ static int cam_ois_platform_driver_remove(struct platform_device *pdev)
 		CAM_ERR(CAM_OIS, "ois device is NULL");
 		return -EINVAL;
 	}
+
+#ifdef CONFIG_MACH_LGE
+	oeis_destroy_sysfs();
+#endif
 
 	CAM_INFO(CAM_OIS, "platform driver remove invoked");
 	soc_info = &o_ctrl->soc_info;

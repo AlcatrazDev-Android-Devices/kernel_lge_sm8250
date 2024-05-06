@@ -1840,6 +1840,10 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 	int32_t vreg_idx = -1;
 	struct cam_sensor_power_setting *power_setting = NULL;
 	struct msm_camera_gpio_num_info *gpio_num_info = NULL;
+#ifdef CONFIG_MACH_LGE
+    struct v4l2_subdev *cci_subdev = cam_cci_get_subdev(CCI_DEVICE_0);
+    struct cci_device *cci_dev = v4l2_get_subdevdata(cci_subdev);
+#endif
 
 	CAM_DBG(CAM_SENSOR, "Enter");
 	if (!ctrl) {
@@ -1984,11 +1988,16 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 			CAM_DBG(CAM_SENSOR, "gpio set val %d",
 				gpio_num_info->gpio_num
 				[power_setting->seq_type]);
-
+#ifdef CONFIG_MACH_LGE
+            mutex_lock(&cci_dev->global_mutex);
+#endif
 			rc = msm_cam_sensor_handle_reg_gpio(
 				power_setting->seq_type,
 				gpio_num_info,
 				(int) power_setting->config_val);
+#ifdef CONFIG_MACH_LGE
+            mutex_unlock(&cci_dev->global_mutex);
+#endif
 			if (rc < 0) {
 				CAM_ERR(CAM_SENSOR,
 					"Error in handling VREG GPIO");
