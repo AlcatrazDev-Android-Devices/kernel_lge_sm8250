@@ -11,6 +11,10 @@
 #include "cam_trace.h"
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
+#ifdef CONFIG_MACH_LGE
+extern bool msm_act_data_enqueue(uint32_t reg_addr, uint32_t reg_data,
+		struct cam_actuator_ctrl_t *a_ctrl);
+#endif
 
 int32_t cam_actuator_construct_default_power_setting(
 	struct cam_sensor_power_ctrl_t *power_info)
@@ -161,6 +165,16 @@ static int32_t cam_actuator_i2c_modes_util(
 				rc);
 			return rc;
 		}
+#ifdef CONFIG_MACH_LGE
+		{
+			// Enqueue Actuator Position
+			struct cam_actuator_ctrl_t *a_ctrl = NULL;
+			a_ctrl = container_of(io_master_info,
+					struct cam_actuator_ctrl_t, io_master_info);
+			msm_act_data_enqueue(i2c_list->i2c_settings.reg_setting[0].reg_addr,
+					i2c_list->i2c_settings.reg_setting[0].reg_data, a_ctrl);
+		}
+#endif
 	} else if (i2c_list->op_code == CAM_SENSOR_I2C_WRITE_SEQ) {
 		rc = camera_io_dev_write_continuous(
 			io_master_info,
@@ -413,7 +427,7 @@ int32_t cam_actuator_i2c_pkt_parse(struct cam_actuator_ctrl_t *a_ctrl,
 	struct common_header      *cmm_hdr = NULL;
 	struct cam_control        *ioctl_ctrl = NULL;
 	struct cam_packet         *csl_packet = NULL;
-	struct cam_config_dev_cmd config;
+	struct cam_config_dev_cmd config = {};
 	struct i2c_data_settings  *i2c_data = NULL;
 	struct i2c_settings_array *i2c_reg_settings = NULL;
 	struct cam_cmd_buf_desc   *cmd_desc = NULL;
@@ -944,7 +958,10 @@ int32_t cam_actuator_driver_cmd(struct cam_actuator_ctrl_t *a_ctrl,
 			a_ctrl->cam_act_state);
 			goto release_mutex;
 		}
-
+#ifdef CONFIG_MACH_LGE
+		// AF Hall buffer reset
+		memset(&(a_ctrl->buf), 0, sizeof(struct msm_act_readout_buffer));
+#endif
 		for (i = 0; i < MAX_PER_FRAME_ARRAY; i++) {
 			i2c_set = &(a_ctrl->i2c_data.per_frame[i]);
 
@@ -1066,3 +1083,74 @@ int32_t cam_actuator_flush_request(struct cam_req_mgr_flush_request *flush_req)
 	mutex_unlock(&(a_ctrl->actuator_mutex));
 	return rc;
 }
+
+#ifdef CONFIG_MACH_LGE /*LGE_CHANGE, Enable Lens Temp. Correction Function, 2018-08-17, hongs.lee@lge.com */
+int32_t act_i2c_e2p_read(struct cam_actuator_ctrl_t *a_ctrl, uint32_t e2p_addr, uint16_t *e2p_data, enum camera_sensor_i2c_type data_type)
+{
+	int32_t ret = 0;
+	uint32_t data = 0;
+	uint16_t temp_sid = 0;
+
+	temp_sid = a_ctrl->io_master_info.cci_client->sid;
+	a_ctrl->io_master_info.cci_client->sid = 0xA8 >> 1;
+
+	ret = camera_io_dev_read(
+		&(a_ctrl->io_master_info),
+		e2p_addr,
+		&data,
+		CAMERA_SENSOR_I2C_TYPE_WORD,
+		data_type);
+
+	a_ctrl->io_master_info.cci_client->sid = temp_sid;
+	*e2p_data = (uint16_t)data;
+
+	return ret;
+}
+
+int32_t act_i2c_read(struct cam_actuator_ctrl_t *a_ctrl, uint32_t RamAddr, uint16_t *RamData, enum camera_sensor_i2c_type data_type)
+{
+	int32_t ret = 0;
+	uint32_t data = 0;
+
+	ret = camera_io_dev_read(
+		&(a_ctrl->io_master_info),
+		RamAddr,
+		&data,
+		CAMERA_SENSOR_I2C_TYPE_BYTE,
+		data_type);
+
+	*RamData = (uint16_t)data;
+
+	return ret;
+}
+
+int32_t act_i2c_write(struct cam_actuator_ctrl_t *a_ctrl, uint32_t RamAddr, uint32_t RamData, enum camera_sensor_i2c_type data_type)
+{
+	struct cam_sensor_i2c_reg_setting  i2c_reg_setting;
+	int32_t ret = 0;
+
+	i2c_reg_setting.addr_type = CAMERA_SENSOR_I2C_TYPE_BYTE;
+	i2c_reg_setting.data_type = data_type;
+	i2c_reg_setting.size = 1;
+	i2c_reg_setting.delay = 0;
+	i2c_reg_setting.reg_setting = (struct cam_sensor_i2c_reg_array *)
+		kzalloc(sizeof(struct cam_sensor_i2c_reg_array) * 1, GFP_KERNEL);
+	if (i2c_reg_setting.reg_setting == NULL)
+	{
+		CAM_ERR(CAM_ACTUATOR,"kzalloc failed");
+		ret = -1;
+		return ret;
+	}
+
+	i2c_reg_setting.reg_setting->reg_addr = RamAddr;
+	i2c_reg_setting.reg_setting->reg_data = RamData;
+	i2c_reg_setting.reg_setting->delay = 0;
+	i2c_reg_setting.reg_setting->data_mask = 0;
+
+	ret = camera_io_dev_write(
+		&(a_ctrl->io_master_info),
+		&i2c_reg_setting);
+	kfree(i2c_reg_setting.reg_setting);
+	return ret;
+}
+#endif
