@@ -172,6 +172,10 @@ struct drm_panel_esd_config {
 	u32 groups;
 };
 
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_COMMON)
+#include "../lge/lge_dsi_panel_def.h"
+#endif
+
 struct dsi_panel {
 	const char *name;
 	const char *type;
@@ -221,6 +225,9 @@ struct dsi_panel {
 	enum dsi_dms_mode dms_mode;
 
 	bool sync_broadcast_en;
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_COMMON)
+	struct lge_dsi_panel lge;
+#endif
 
 	int panel_test_gpio;
 	int power_mode;

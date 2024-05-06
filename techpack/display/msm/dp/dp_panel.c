@@ -2006,6 +2006,54 @@ static int dp_panel_set_dpcd(struct dp_panel *dp_panel, u8 *dpcd)
 	return 0;
 }
 
+#if defined(CONFIG_LGE_DISPLAY_COMMON)
+static int dp_panel_read_edid(struct dp_panel *dp_panel,
+	struct drm_connector *connector)
+{
+	int ret = 0;
+	int count = 0;
+	struct dp_panel_private *panel;
+	struct edid *edid;
+
+	if (!dp_panel) {
+		pr_err("invalid input\n");
+		return -EINVAL;
+	}
+
+	panel = container_of(dp_panel, struct dp_panel_private, dp_panel);
+
+	if (panel->custom_edid) {
+		pr_debug("skip edid read in debug mode\n");
+		goto end;
+	}
+
+	while (count++ <= 30) {
+		sde_get_edid(connector, &panel->aux->drm_aux->ddc,
+			(void **)&dp_panel->edid_ctrl);
+		pr_err(" %s %d EDID read %s, count=%d", __func__, __LINE__,
+			!dp_panel->edid_ctrl->edid?"failed":"successed",count);
+
+		if (!dp_panel->edid_ctrl->edid) {
+			if (count % 10 == 0) {
+				panel->aux->set_recfg(panel->aux->drm_aux);
+			}
+			msleep(50);
+		} else
+			break;
+	}
+
+	if (!dp_panel->edid_ctrl->edid) {
+		pr_err("EDID read failed\n");
+		ret = -EINVAL;
+		goto end;
+	}
+end:
+	edid = dp_panel->edid_ctrl->edid;
+	dp_panel->audio_supported = drm_detect_monitor_audio(edid);
+
+	return ret;
+}
+#else
 static int dp_panel_read_edid(struct dp_panel *dp_panel,
 	struct drm_connector *connector)
 {
@@ -2038,6 +2086,7 @@ end:
 
 	return ret;
 }
+#endif
 
 static void dp_panel_decode_dsc_dpcd(struct dp_panel *dp_panel)
 {

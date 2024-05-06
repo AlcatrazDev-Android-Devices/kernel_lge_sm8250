@@ -326,6 +326,7 @@ static void dp_audio_setup_sdp(struct dp_audio_private *audio)
 		dp_audio_copy_management_sdp(audio);
 		dp_audio_isrc_sdp(audio);
 	}
+	DP_ERR("dp_audio_setup_sdp\n");
 }
 
 static void dp_audio_setup_acr(struct dp_audio_private *audio)
@@ -370,6 +371,7 @@ static void dp_audio_enable(struct dp_audio_private *audio, bool enable)
 		DP_WARN("session inactive. enable=%d\n", enable);
 		return;
 	}
+	DP_ERR("dp_audio_enable\n");
 	catalog->data = enable;
 	catalog->enable(catalog);
 
@@ -430,7 +432,7 @@ static int dp_audio_info_setup(struct platform_device *pdev,
 
 	mutex_unlock(&audio->ops_lock);
 
-	DP_DEBUG("audio stream configured\n");
+	DP_ERR("audio stream configured\n");
 
 	return rc;
 }
@@ -517,7 +519,7 @@ static void dp_audio_teardown_done(struct platform_device *pdev)
 	atomic_set(&audio->acked, 1);
 	complete_all(&audio->hpd_comp);
 
-	DP_DEBUG("audio engine disabled\n");
+	DP_ERR("dp_audio_teardown_done\n");
 }
 
 static int dp_audio_ack_done(struct platform_device *pdev, u32 ack)
@@ -535,7 +537,7 @@ static int dp_audio_ack_done(struct platform_device *pdev, u32 ack)
 		audio->ack_enabled = ack & AUDIO_ACK_ENABLE ?
 			true : false;
 
-		DP_DEBUG("audio ack feature %s\n",
+		DP_ERR("audio ack feature %s\n",
 			audio->ack_enabled ? "enabled" : "disabled");
 		goto end;
 	}
@@ -545,7 +547,7 @@ static int dp_audio_ack_done(struct platform_device *pdev, u32 ack)
 
 	ack_hpd = ack & AUDIO_ACK_CONNECT;
 
-	DP_DEBUG("acknowledging audio (%d)\n", ack_hpd);
+	DP_ERR("acknowledging audio (%d)\n", ack_hpd);
 
 	if (!audio->engine_on) {
 		atomic_set(&audio->acked, 1);
@@ -566,6 +568,8 @@ static int dp_audio_codec_ready(struct platform_device *pdev)
 		rc = PTR_ERR(audio);
 		goto end;
 	}
+
+	DP_ERR("dp_audio_codec_ready\n");
 
 	queue_delayed_work(audio->notify_workqueue,
 			&audio->notify_delayed_work, HZ/4);
@@ -621,6 +625,10 @@ static int dp_audio_register_ext_disp(struct dp_audio_private *audio)
 	rc = msm_ext_disp_register_intf(audio->ext_pdev, ext);
 	if (rc)
 		DP_ERR("failed to register disp\n");
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	else
+		DP_ERR("success to register disp\n");
+#endif
 #endif
 end:
 	if (pd)
@@ -662,6 +670,10 @@ static int dp_audio_deregister_ext_disp(struct dp_audio_private *audio)
 	rc = msm_ext_disp_deregister_intf(audio->ext_pdev, ext);
 	if (rc)
 		DP_ERR("failed to deregister disp\n");
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	else
+		DP_ERR("success to deregister disp\n");
+#endif
 #endif
 
 end:
@@ -702,8 +714,13 @@ static int dp_audio_notify(struct dp_audio_private *audio, u32 state)
 		goto end;
 	}
 
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	DP_ERR("success\n");
+#else
 	DP_DEBUG("success\n");
+#endif
 end:
+	DP_ERR("rc %d, state %d acked %d, engine_on %d\n",rc,state,atomic_read(&audio->acked),audio->engine_on);
 	return rc;
 }
 
@@ -763,7 +780,11 @@ static int dp_audio_on(struct dp_audio *dp_audio)
 	if (rc)
 		goto end;
 
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	DP_ERR("success\n");
+#else
 	DP_DEBUG("success\n");
+#endif
 end:
 	return rc;
 }
@@ -797,7 +818,11 @@ static int dp_audio_off(struct dp_audio *dp_audio)
 	if (rc)
 		goto end;
 
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	DP_ERR("success\n");
+#else
 	DP_DEBUG("success\n");
+#endif
 end:
 	dp_audio_config(audio, EXT_DISPLAY_CABLE_DISCONNECT);
 

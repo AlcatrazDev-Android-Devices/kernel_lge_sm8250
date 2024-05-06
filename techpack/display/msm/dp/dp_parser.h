@@ -235,6 +235,9 @@ struct dp_parser {
 	u32 max_dp_dsc_input_width_pixs;
 	bool lphw_hpd;
 	u32 mst_fixed_port[MAX_DP_MST_STREAMS];
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	bool lge_dp_use;
+#endif
 
 	const char *display_type;
 

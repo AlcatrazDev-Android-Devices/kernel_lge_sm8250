@@ -40,7 +40,22 @@
 #define MR_LINK_CUSTOM80 0x200
 #define MR_LINK_TRAINING4  0x40
 
+#if defined(CONFIG_LGE_DUAL_SCREEN)
+#include <linux/lge_ds3.h>
+#include <linux/hall_ic.h>
+struct hallic_dev dd_lt_dev = {
+	.name = "dd_lt_status",
+	.state = 0,
+};
+extern bool is_ds_connected(void);
+#endif
+
 #define DP_MAX_LANES 4
+
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+bool dp_lt1_state;
+#endif
+
 
 struct dp_mst_ch_slot_info {
 	u32 start_slot;
@@ -151,6 +166,9 @@ trigger_idle:
 		DP_WARN("time out\n");
 	else
 		DP_DEBUG("mainlink off done\n");
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	dp_lt1_state = false;
+#endif
 }
 
 /**
@@ -428,7 +446,12 @@ static int dp_ctrl_link_rate_down_shift(struct dp_ctrl_private *ctrl)
 		ctrl->link->link_params.bw_code = DP_LINK_BW_1_62;
 		break;
 	}
-
+#if defined(CONFIG_LGE_DUAL_SCREEN)
+	if (is_ds_connected()) {
+		pr_info("Force set BW 2.7G for DS3\n");
+		ctrl->link->link_params.bw_code = DP_LINK_BW_2_7;
+	}
+#endif
 	DP_DEBUG("new bw code=0x%x\n", ctrl->link->link_params.bw_code);
 
 	return ret;
@@ -521,7 +544,18 @@ static int dp_ctrl_link_train(struct dp_ctrl_private *ctrl)
 	struct drm_dp_link link_info = {0};
 
 	ctrl->link->phy_params.p_level = 0;
+#ifdef CONFIG_LGE_DISPLAY_COMMON
+	if (ctrl->parser->lge_dp_use && !dp_lt1_state)
+		ctrl->link->phy_params.v_level = 2;
+#ifdef CONFIG_LGE_DUAL_SCREEN
+	else if (is_ds_connected())
+		ctrl->link->phy_params.v_level = 2;
+#endif
+	else
+		ctrl->link->phy_params.v_level = 0;
+#else //QCT origin
 	ctrl->link->phy_params.v_level = 0;
+#endif
 
 	link_info.num_lanes = ctrl->link->link_params.lane_count;
 	link_info.rate = drm_dp_bw_code_to_link_rate(
@@ -548,6 +582,12 @@ static int dp_ctrl_link_train(struct dp_ctrl_private *ctrl)
 
 	ret = dp_ctrl_link_training_1(ctrl);
 	if (ret) {
+#if defined(CONFIG_LGE_DISPLAY_COMMON)
+		if (ctrl->parser->lge_dp_use) {
+			dp_lt1_state = true;
+			pr_err("dp_lt1_state: %d\n", dp_lt1_state?1:0);
+		}
+#endif
 		DP_ERR("link training #1 failed\n");
 		goto end;
 	}
@@ -708,8 +748,17 @@ static int dp_ctrl_link_setup(struct dp_ctrl_private *ctrl, bool shallow)
 		dp_ctrl_select_training_pattern(ctrl, downgrade);
 
 		rc = dp_ctrl_setup_main_link(ctrl);
+#if defined(CONFIG_LGE_DUAL_SCREEN)
+		if(!rc) {
+			if (is_ds_connected()) {
+				hallic_set_state(&dd_lt_dev, 1);
+			}
+			break;
+		}
+#else
 		if (!rc)
 			break;
+#endif
 
 		/*
 		 * Shallow means link training failure is not important.
@@ -1349,6 +1398,9 @@ static void dp_ctrl_off(struct dp_ctrl *dp_ctrl)
 
 	dp_ctrl_disable_link_clock(ctrl);
 
+#if defined(CONFIG_LGE_DUAL_SCREEN)
+	dd_lt_dev.state = 0;
+#endif
 	ctrl->mst_mode = false;
 	ctrl->fec_mode = false;
 	ctrl->dsc_mode = false;
@@ -1446,6 +1498,13 @@ struct dp_ctrl *dp_ctrl_get(struct dp_ctrl_in *in)
 	dp_ctrl->stream_off = dp_ctrl_stream_off;
 	dp_ctrl->stream_pre_off = dp_ctrl_stream_pre_off;
 	dp_ctrl->set_mst_channel_info = dp_ctrl_set_mst_channel_info;
+#if defined(CONFIG_LGE_DUAL_SCREEN)
+	if (hallic_register(&dd_lt_dev) < 0 ) {
+		pr_err("dd_lt_dev registration failed\n");
+	} else {
+		pr_info("dd_lt_dev registration success\n");
+	}
+#endif
 
 	return dp_ctrl;
 error:

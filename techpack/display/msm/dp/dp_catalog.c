@@ -360,6 +360,22 @@ static void dp_catalog_aux_enable(struct dp_catalog_aux *aux, bool enable)
 	}
 }
 
+#if defined(CONFIG_LGE_DISPLAY_COMMON)
+static void dp_catalog_aux_cfg_change(struct dp_catalog_aux *aux,
+		struct dp_aux_cfg *cfg, enum dp_phy_aux_config_type type, u32 index)
+{
+	struct dp_catalog_private *catalog;
+	struct dp_io_data *io_data;
+
+	catalog = dp_catalog_get_priv(aux);
+
+	io_data = catalog->io.dp_phy;
+
+	pr_info("Force set aux cfg#%d index to %d(0x%08x)\n", type, index, cfg[type].lut[index]);
+	dp_write(cfg[type].offset, cfg[type].lut[index]);
+}
+#endif
+
 static void dp_catalog_aux_update_cfg(struct dp_catalog_aux *aux,
 		struct dp_aux_cfg *cfg, enum dp_phy_aux_config_type type)
 {
@@ -378,7 +394,7 @@ static void dp_catalog_aux_update_cfg(struct dp_catalog_aux *aux,
 
 	current_index = cfg[type].current_index;
 	new_index = (current_index + 1) % cfg[type].cfg_cnt;
-	DP_DEBUG("Updating %s from 0x%08x to 0x%08x\n",
+	DP_INFO("Updating %s from 0x%08x to 0x%08x\n",
 		dp_phy_aux_config_type_to_string(type),
 	cfg[type].lut[current_index], cfg[type].lut[new_index]);
 
@@ -2701,6 +2717,9 @@ struct dp_catalog *dp_catalog_get(struct device *dev, struct dp_parser *parser)
 		.setup         = dp_catalog_aux_setup,
 		.get_irq       = dp_catalog_aux_get_irq,
 		.clear_hw_interrupts = dp_catalog_aux_clear_hw_interrupts,
+#if defined(CONFIG_LGE_DISPLAY_COMMON)
+		.change_aux_cfg = dp_catalog_aux_cfg_change,
+#endif
 	};
 	struct dp_catalog_ctrl ctrl = {
 		.state_ctrl     = dp_catalog_ctrl_state_ctrl,

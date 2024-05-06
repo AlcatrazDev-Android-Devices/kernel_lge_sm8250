@@ -16,10 +16,10 @@
 #define DP_DEBUG(fmt, ...)                                                   \
 	do {                                                                 \
 		if (unlikely(drm_debug & DRM_UT_KMS))                        \
-			DRM_DEBUG("[msm-dp-debug][%-4d]"fmt, current->pid,   \
+			DRM_INFO("[msm-dp-debug][%-4d]"fmt, current->pid,   \
 					##__VA_ARGS__);                      \
 		else                                                         \
-			pr_debug("[drm:%s][msm-dp-debug][%-4d]"fmt, __func__,\
+			pr_info("[drm:%s][msm-dp-debug][%-4d]"fmt, __func__,\
 				       current->pid, ##__VA_ARGS__);         \
 	} while (0)
 

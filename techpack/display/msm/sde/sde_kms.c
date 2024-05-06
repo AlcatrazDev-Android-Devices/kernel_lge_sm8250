@@ -714,6 +714,10 @@ no_ops:
 	return 0;
 }
 
+#ifdef CONFIG_LGE_HANDLE_PANIC
+int skip_free_rdump = 0;
+#endif
+
 static void _sde_clear_boot_config(struct sde_boot_config *boot_cfg)
 {
 	if (!boot_cfg)
@@ -739,6 +743,15 @@ static int _sde_kms_release_splash_buffer(struct sde_kms *sde_kms,
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_LGE_HANDLE_PANIC
+	if(!skip_free_rdump)
+	{
+		SDE_DEBUG("Freeing display rdump region because dload_mode is disabled.\n");
+		ramdump_buffer_size = 0;
+	}
+	else
+		SDE_DEBUG("NOT freeing display rdump region because dload_mode is enabled.\n");
+#endif
 	/* leave ramdump memory only if base address matches */
 	if (ramdump_base == mem_addr &&
 			ramdump_buffer_size <= splash_buffer_size) {

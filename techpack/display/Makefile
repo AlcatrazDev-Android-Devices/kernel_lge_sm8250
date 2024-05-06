@@ -9,6 +9,14 @@ ifeq ($(CONFIG_ARCH_KONA), y)
 LINUXINCLUDE    += -include $(srctree)/techpack/display/config/konadispconf.h
 endif
 
+ifeq ($(CONFIG_MACH_KONA_TIMELM), y)
+include $(srctree)/techpack/display/config/timelmdisp.conf
+endif
+
+ifeq ($(CONFIG_MACH_KONA_TIMELM), y)
+LINUXINCLUDE    += -include $(srctree)/techpack/display/config/timelmdispconf.h
+endif
+
 ifeq ($(CONFIG_ARCH_LITO), y)
 include $(srctree)/techpack/display/config/saipdisp.conf
 endif
