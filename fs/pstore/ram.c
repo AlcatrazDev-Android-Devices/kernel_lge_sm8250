@@ -36,6 +36,10 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 
+#ifdef CONFIG_LGE_HANDLE_PANIC
+#include <soc/qcom/lge/lge_handle_panic.h>
+#endif
+
 #define RAMOOPS_KERNMSG_HDR "===="
 #define MIN_MEM_SIZE 4096UL
 
@@ -817,6 +821,13 @@ static int ramoops_probe(struct platform_device *pdev)
 		goto fail_init_mprz;
 
 	cxt->pstore.data = cxt;
+#ifdef CONFIG_LGE_HANDLE_PANIC
+	if (cxt->console_size)
+		cxt->pstore.bufsize = 1024; /* LOG_LINE_MAX */
+	cxt->pstore.bufsize = max(cxt->record_size, cxt->pstore.bufsize);
+#else
+	cxt->pstore.bufsize = cxt->dprzs[0]->buffer_size;
+#endif
 	/*
 	 * Prepare frontend flags based on which areas are initialized.
 	 * For ramoops_init_przs() cases, the "max count" variable tells
@@ -869,6 +880,10 @@ static int ramoops_probe(struct platform_device *pdev)
 	pr_info("attached 0x%lx@0x%llx, ecc: %d/%d\n",
 		cxt->size, (unsigned long long)cxt->phys_addr,
 		cxt->ecc_info.ecc_size, cxt->ecc_info.block_size);
+
+#ifdef CONFIG_LGE_HANDLE_PANIC
+	lge_set_ram_console_addr(cxt->phys_addr, cxt->size);
+#endif
 
 	return 0;
 

@@ -10,12 +10,35 @@
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+#define FS_FLAG_FILE              "/data/fast_switch"
 
 #include "sched.h"
 
 #include <linux/sched/cpufreq.h>
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
+static unsigned int fs_fast_switch = 1;
+
+static void read_file(char *filename)
+{
+	int fd;
+	char buf[1];
+	mm_segment_t old_fs = get_fs();
+	set_fs(KERNEL_DS);
+	fd = ksys_open(filename, O_RDONLY, 0);
+
+	if (fd >= 0) {
+		ksys_read(fd, buf, 1);
+		if(buf[0] == 49)
+			fs_fast_switch = 1;
+		else
+			fs_fast_switch = 0;
+		ksys_close(fd);
+	} else
+		pr_err("FS_FLAG_FILE file open fail\n");
+
+	set_fs(old_fs);
+}
 
 struct sugov_tunables {
 	struct gov_attr_set	attr_set;
@@ -1209,12 +1232,15 @@ static int sugov_init(struct cpufreq_policy *policy)
 	unsigned long util;
 	int ret = 0;
 
+	read_file(FS_FLAG_FILE);
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
 		return -EBUSY;
 
 	cpufreq_enable_fast_switch(policy);
 
+	if(fs_fast_switch == 0)
+		cpufreq_disable_fast_switch(policy);
 	sg_policy = sugov_policy_alloc(policy);
 	if (!sg_policy) {
 		ret = -ENOMEM;

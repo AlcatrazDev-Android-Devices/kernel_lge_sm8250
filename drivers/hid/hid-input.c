@@ -36,6 +36,11 @@
 
 #define unk	KEY_UNKNOWN
 
+#ifdef CONFIG_LGE_DUAL_SCREEN
+#define DS_HID_VID	0x1004
+#define DS_HID_PID	0x637a
+#endif
+
 static const unsigned char hid_keyboard[256] = {
 	  0,  0,  0,  0, 30, 48, 46, 32, 18, 33, 34, 35, 23, 36, 37, 38,
 	 50, 49, 24, 25, 16, 19, 31, 20, 22, 47, 17, 45, 21, 44,  2,  3,
@@ -578,6 +583,8 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 	struct hid_device *device = input_get_drvdata(input);
 	int max = 0, code;
 	unsigned long *bit = NULL;
+
+	HID_TOUCH_TRACE();
 
 	field->hidinput = hidinput;
 
@@ -1361,6 +1368,13 @@ void hidinput_hid_event(struct hid_device *hid, struct hid_field *field, struct 
 
 	input_event(input, usage->type, usage->code, value);
 
+#ifdef CONFIG_LGE_DUAL_SCREEN
+	if (input->id.product == DS_HID_PID &&
+			input->id.vendor == DS_HID_VID &&
+			usage->type == EV_KEY)
+		pr_info("DualScreen Key(0x%x) value(%d)\n", usage->code, value);
+#endif
+
 	if ((field->flags & HID_MAIN_ITEM_RELATIVE) &&
 	    usage->type == EV_KEY && value) {
 		input_sync(input);
@@ -1493,6 +1507,8 @@ static int hidinput_input_event(struct input_dev *dev, unsigned int type,
 	struct hid_device *hid = input_get_drvdata(dev);
 	struct hid_field *field;
 	int offset;
+
+	HID_TOUCH_TRACE();
 
 	if (type == EV_FF)
 		return input_ff_event(dev, type, code, value);
@@ -1734,6 +1750,8 @@ static inline void hidinput_configure_usages(struct hid_input *hidinput,
 {
 	int i, j;
 
+	HID_TOUCH_TRACE();
+
 	for (i = 0; i < report->maxfield; i++)
 		for (j = 0; j < report->field[i]->maxusage; j++)
 			hidinput_configure_usage(hidinput, report->field[i],
@@ -1756,6 +1774,8 @@ int hidinput_connect(struct hid_device *hid, unsigned int force)
 
 	INIT_LIST_HEAD(&hid->inputs);
 	INIT_WORK(&hid->led_work, hidinput_led_worker);
+
+	HID_TOUCH_TRACE();
 
 	hid->status &= ~HID_STAT_DUP_DETECTED;
 
@@ -1850,6 +1870,8 @@ EXPORT_SYMBOL_GPL(hidinput_connect);
 void hidinput_disconnect(struct hid_device *hid)
 {
 	struct hid_input *hidinput, *next;
+
+	HID_TOUCH_TRACE();
 
 	hidinput_cleanup_battery(hid);
 

@@ -21,6 +21,10 @@
 #include <linux/reset.h>
 #include <linux/debugfs.h>
 
+#ifdef CONFIG_LGE_DUAL_SCREEN
+#include <linux/lge_ds3.h>
+#endif
+
 #define USB2_PHY_USB_PHY_UTMI_CTRL0		(0x3c)
 #define OPMODE_MASK				(0x3 << 3)
 #define OPMODE_NONDRIVING			(0x1 << 3)
@@ -82,6 +86,23 @@
 #define USB_HSPHY_1P8_VOL_MIN			1704000 /* uV */
 #define USB_HSPHY_1P8_VOL_MAX			1800000 /* uV */
 #define USB_HSPHY_1P8_HPM_LOAD			19000	/* uA */
+#ifdef CONFIG_LGE_USB
+#define USB2PHY_OVERRIDE_X0		0x6c
+#define USB2PHY_OVERRIDE_X1		0x70
+#define USB2PHY_OVERRIDE_X2		0x74
+#define USB2PHY_OVERRIDE_X3		0x78
+
+#define MAX_TUNE_VAL_STR		30
+static char override_phy_tune[MAX_TUNE_VAL_STR] = "";
+module_param_string(override_phy_tune, override_phy_tune,
+		MAX_TUNE_VAL_STR, S_IRUGO|S_IWUSR);
+MODULE_PARM_DESC(override_phy_tune, "Override USB2PHY_USB_PHY_PARAMETER_OVERRIDE");
+
+static char override_phy_tune_host[MAX_TUNE_VAL_STR] = "";
+module_param_string(override_phy_tune_host, override_phy_tune_host,
+		MAX_TUNE_VAL_STR, S_IRUGO|S_IWUSR);
+MODULE_PARM_DESC(override_phy_tune_host, "Override USB2PHY_USB_PHY_PARAMETER_OVERRIDE for host");
+#endif
 
 struct msm_hsphy {
 	struct usb_phy		phy;
@@ -121,6 +142,14 @@ struct msm_hsphy {
 	u8			param_ovrd1;
 	u8			param_ovrd2;
 	u8			param_ovrd3;
+#ifdef CONFIG_LGE_USB
+	uint32_t		qusb2phy_tune[4];
+	uint32_t		qusb2phy_tune_host[4];
+#endif
+#ifdef CONFIG_LGE_DUAL_SCREEN
+	uint32_t		qusb2phy_tune_ds[4];
+	bool			param_override_by_ds;
+#endif
 };
 
 static void msm_hsphy_enable_clocks(struct msm_hsphy *phy, bool on)
@@ -326,6 +355,165 @@ static void msm_hsphy_reset(struct msm_hsphy *phy)
 		dev_err(phy->phy.dev, "%s: phy_reset deassert failed\n",
 							__func__);
 }
+#ifdef CONFIG_LGE_USB
+static void hsusb_phy_tune_init(struct msm_hsphy *phy)
+{
+	uint32_t *tune = NULL;
+	uint32_t aseq[10];
+	bool is_dts = 0;
+
+#ifdef CONFIG_LGE_DUAL_SCREEN
+	if (check_ds_connect_state() >= DS_STATE_HPD_ENABLED) {
+		is_dts = true;
+
+		if (is_dts) {
+			tune = phy->qusb2phy_tune_ds;
+			phy->param_override_by_ds = true;
+			sprintf(override_phy_tune,"0x%02x,0x%02x,0x%02x,0x%02x",
+					tune[0],tune[1],tune[2],tune[3]);
+		}
+	} else {
+		if (phy->param_override_by_ds) {
+			override_phy_tune[0] = '\0';
+			phy->param_override_by_ds = false;
+		}
+#endif
+	if (strlen(override_phy_tune) > 0) {
+		get_options(override_phy_tune, ARRAY_SIZE(aseq), aseq);
+		if (aseq[0] < 4) {
+			is_dts = true;
+		} else {
+			tune = &aseq[1];
+			if (!(tune[0] || tune[1] || tune[2] || tune[3])) {
+				pr_debug("%s(): override values are all 0x00, re-set to dts values",
+						__func__);
+				is_dts = true;
+			}
+		}
+	} else {
+		is_dts = true;
+	}
+
+	if (is_dts) {
+		tune = phy->qusb2phy_tune;
+		sprintf(override_phy_tune,"0x%02x,0x%02x,0x%02x,0x%02x",
+				tune[0],tune[1],tune[2],tune[3]);
+	}
+#ifdef CONFIG_LGE_DUAL_SCREEN
+	}
+#endif
+
+	/*
+		Parameters sequence :
+		  - tune[0] : OVERRIDE_X0 (0x6C)
+		  - tune[1] : OVERRIDE_X1 (0x70)
+		  - tune[2] : OVERRIDE_X2 (0x74)
+		  - tune[3] : OVERRIDE_X3 (0x78)
+	*/
+	if (tune[0]) {
+		writel_relaxed(tune[0], phy->base + USB2PHY_OVERRIDE_X0);
+		pr_debug("%s(): Programming OVERRIDE_X0(0x6C) parameter as:0x%02x\n",
+				__func__, tune[0]);
+	} else
+		tune[0] = readl_relaxed(phy->base + USB2PHY_OVERRIDE_X0);
+
+	if (tune[1]) {
+		writel_relaxed(tune[1], phy->base + USB2PHY_OVERRIDE_X1);
+		pr_debug("%s(): Programming OVERRIDE_X1(0x70) parameter as:0x%02x\n",
+				__func__, tune[1]);
+	} else
+		tune[1] = readl_relaxed(phy->base + USB2PHY_OVERRIDE_X1);
+
+	if (tune[2]) {
+		writel_relaxed(tune[2], phy->base + USB2PHY_OVERRIDE_X2);
+		pr_debug("%s(): Programming OVERRIDE_X2(0x74) parameter as:0x%02x\n",
+				__func__, tune[2]);
+	} else
+		tune[2] = readl_relaxed(phy->base + USB2PHY_OVERRIDE_X2);
+
+	if (tune[3]) {
+		writel_relaxed(tune[3], phy->base + USB2PHY_OVERRIDE_X3);
+		pr_debug("%s(): Programming OVERRIDE_X3(0x78) parameter as:0x%02x\n",
+				__func__, tune[3]);
+	} else
+		tune[3] = readl_relaxed(phy->base + USB2PHY_OVERRIDE_X3);
+
+        pr_info("%s: USB2PHY Tuning values = 0x%02X,0x%02X,0x%02X,0x%02X (%s)\n",
+                        __func__,
+                        tune[0],
+                        tune[1],
+                        tune[2],
+                        tune[3],
+                        (is_dts) ? "by dts" : "by override");
+}
+
+static void hsusb_phy_tune_init_host(struct msm_hsphy *phy)
+{
+        uint32_t *tune = NULL;
+        uint32_t aseq[10];
+        bool is_dts = 0;
+
+        if (strlen(override_phy_tune_host) >  0) {
+                get_options(override_phy_tune_host, ARRAY_SIZE(aseq), aseq);
+		if (aseq[0] < 4) {
+			is_dts = true;
+		} else {
+	                tune = &aseq[1];
+		}
+	} else {
+		is_dts = true;
+	}
+
+	if(is_dts) {
+                tune = phy->qusb2phy_tune_host;
+		sprintf(override_phy_tune_host,"0x%02x,0x%02x,0x%02x,0x%02x",
+				tune[0],tune[1],tune[2],tune[3]);
+	}
+
+	/*
+		Parameters sequence :
+		  - tune[0] : OVERRIDE_X0 (0x6C)
+		  - tune[1] : OVERRIDE_X1 (0x70)
+		  - tune[2] : OVERRIDE_X2 (0x74)
+		  - tune[3] : OVERRIDE_X3 (0x78)
+	*/
+        if (tune[0]) {
+		writel_relaxed(tune[0], phy->base + USB2PHY_OVERRIDE_X0);
+		pr_debug("%s(): Programming OVERRIDE_X0(0x6C) parameter as:0x%02x\n",
+				__func__, tune[0]);
+	} else
+		tune[0] = readl_relaxed(phy->base + USB2PHY_OVERRIDE_X0);
+
+	if (tune[1]) {
+		writel_relaxed(tune[1], phy->base + USB2PHY_OVERRIDE_X1);
+		pr_debug("%s(): Programming OVERRIDE_X1(0x70) parameter as:0x%02x\n",
+				__func__, tune[1]);
+	} else
+		tune[1] = readl_relaxed(phy->base + USB2PHY_OVERRIDE_X1);
+
+	if (tune[2]) {
+		writel_relaxed(tune[2], phy->base + USB2PHY_OVERRIDE_X2);
+		pr_debug("%s(): Programming OVERRIDE_X2(0x74) parameter as:0x%02x\n",
+				__func__, tune[2]);
+	} else
+		tune[2] = readl_relaxed(phy->base + USB2PHY_OVERRIDE_X2);
+
+	if (tune[3]) {
+		writel_relaxed(tune[3], phy->base + USB2PHY_OVERRIDE_X3);
+		pr_debug("%s(): Programming OVERRIDE_X3(0x78) parameter as:0x%02x\n",
+				__func__, tune[3]);
+	} else
+		tune[3] = readl_relaxed(phy->base + USB2PHY_OVERRIDE_X3);
+
+        pr_info("%s: USB2PHY Host Tuning values = 0x%02X,0x%02X,0x%02X,0x%02X (%s)\n",
+                        __func__,
+                        tune[0],
+                        tune[1],
+                        tune[2],
+                        tune[3],
+                        (is_dts) ? "by dts" : "by override");
+}
+#endif
 
 static void hsusb_phy_write_seq(void __iomem *base, u32 *seq, int cnt,
 		unsigned long delay)
@@ -461,6 +649,13 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 
 	msm_usb_write_readback(phy->base, USB2_PHY_USB_PHY_CFG0,
 				UTMI_PHY_CMN_CTRL_OVERRIDE_EN, 0);
+
+#ifdef CONFIG_LGE_USB
+        if (phy->phy.flags & PHY_HOST_MODE)
+                hsusb_phy_tune_init_host(phy);
+        else
+                hsusb_phy_tune_init(phy);
+#endif
 
 	return 0;
 }
@@ -829,6 +1024,40 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
+
+#ifdef CONFIG_LGE_USB
+	of_get_property(dev->of_node, "qcom,hsusb-phy-tune", &ret);
+	if (ret > 0) {
+		of_property_read_u32_array(dev->of_node, "qcom,hsusb-phy-tune",
+				phy->qusb2phy_tune,
+				ret/sizeof(u32));
+	} else {
+		memset(phy->qusb2phy_tune, 0,
+				sizeof(phy->qusb2phy_tune));
+	}
+
+	of_get_property(dev->of_node, "qcom,hsusb-phy-tune-host", &ret);
+	if (ret > 0) {
+		of_property_read_u32_array(dev->of_node, "qcom,hsusb-phy-tune-host",
+				phy->qusb2phy_tune_host,
+				ret/sizeof(u32));
+	} else {
+		memset(phy->qusb2phy_tune_host, 0,
+				sizeof(phy->qusb2phy_tune_host));
+	}
+#endif
+
+#ifdef CONFIG_LGE_DUAL_SCREEN
+	of_get_property(dev->of_node, "qcom,hsusb-phy-tune-ds", &ret);
+	if (ret > 0) {
+		of_property_read_u32_array(dev->of_node, "qcom,hsusb-phy-tune-ds",
+				phy->qusb2phy_tune_ds,
+				ret/sizeof(u32));
+	} else {
+		memset(phy->qusb2phy_tune_ds, 0,
+				sizeof(phy->qusb2phy_tune_ds));
+	}
+#endif
 
 	ret = of_property_read_u32_array(dev->of_node, "qcom,vdd-voltage-level",
 					 (u32 *) phy->vdd_levels,

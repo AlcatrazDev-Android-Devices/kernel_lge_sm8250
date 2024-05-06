@@ -9,6 +9,9 @@
 #include <linux/sched/clock.h>
 #include <soc/qcom/sysmon.h>
 #include "esoc-mdm.h"
+// LGP_MODEMBSP_SFR For SFR display
+#include <linux/module.h>
+// LGP_MODEMBSP_SFR For SFR display
 
 enum gpio_update_config {
 	GPIO_UPDATE_BOOTING_CONFIG = 1,
@@ -389,6 +392,10 @@ static void mdm_get_restart_reason(struct work_struct *work)
 	mdm->get_restart_reason = false;
 }
 
+// LGP_MODEMBSP_SFR For SFR display
+extern void mhi_print_sfr(void);
+// LGP_MODEMBSP_SFR For SFR display
+
 void mdm_wait_for_status_low(struct mdm_ctrl *mdm, bool atomic)
 {
 	uint64_t timeout;
@@ -401,6 +408,9 @@ void mdm_wait_for_status_low(struct mdm_ctrl *mdm, bool atomic)
 	do {
 		if (gpio_get_value(MDM_GPIO(mdm, MDM2AP_STATUS)) == 0) {
 			esoc_mdm_log("MDM2AP_STATUS went LOW\n");
+			// LGP_MODEMBSP_SFR For SFR display
+			mhi_print_sfr();
+			// LGP_MODEMBSP_SFR For SFR display
 			return;
 		}
 		now = local_clock();

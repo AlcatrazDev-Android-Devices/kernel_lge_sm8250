@@ -144,6 +144,11 @@ enum ufs_desc_def_size {
 	QUERY_DESC_GEOMETRY_DEF_SIZE		= 0x48,
 	QUERY_DESC_POWER_DEF_SIZE		= 0x62,
 	QUERY_DESC_HEALTH_DEF_SIZE		= 0x25,
+
+#ifdef CONFIG_LFS_UFS
+	QUERY_DESC_STRING_MAX_SIZE      = 0xFE,
+#endif
+
 };
 
 /* Unit descriptor parameters offsets in bytes*/

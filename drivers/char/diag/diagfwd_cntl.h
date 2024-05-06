@@ -40,6 +40,9 @@
 #define DIAG_CTRL_MSG_TIME_SYNC_PKT		31
 #define DIAG_CTRL_MSG_DIAGID	33
 #define DIAG_CTRL_MSG_PASSTHRU	35
+#ifdef CONFIG_LGE_USB_DIAG_LOCK_SPR
+#define DIAG_CTRL_MSG_LGE_DIAG_ENABLE		100
+#endif
 /*
  * Feature Mask Definitions: Feature mask is used to specify Diag features
  * supported by the Apps processor

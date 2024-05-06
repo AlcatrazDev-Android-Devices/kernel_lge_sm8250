@@ -3,7 +3,11 @@
  * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
  */
 
+#ifdef CONFIG_LGE_PM
+#define pr_fmt(fmt)	"qni: %s: " fmt, __func__
+#else
 #define pr_fmt(fmt)	"Qnovo: %s: " fmt, __func__
+#endif
 
 #include <linux/device.h>
 #include <linux/module.h>
@@ -16,7 +20,9 @@
 #include <linux/pmic-voter.h>
 #include <linux/delay.h>
 #include <linux/pinctrl/consumer.h>
-
+#ifdef CONFIG_LGE_PM
+#include <linux/jiffies.h>
+#endif
 #define QNOVO_PE_CTRL			0x45
 #define QNOVO_PTRAIN_EN_BIT		BIT(7)
 
@@ -83,6 +89,9 @@
 
 #define CHG_READY_VOTER		"CHG_READY_VOTER"
 #define USB_READY_VOTER		"USB_READY_VOTER"
+#ifdef CONFIG_LGE_PM
+#define DC_READY_VOTER		"DC_READY_VOTER"
+#endif
 
 #define CLASS_ATTR_IDX_RO(_name, _func)  \
 static ssize_t _name##_show(struct class *c, struct class_attribute *attr, \
@@ -128,7 +137,34 @@ struct qnovo {
 	int			fv_uV_request;
 	int			fcc_uA_request;
 	int			usb_present;
+#ifdef CONFIG_LGE_PM
+	int			charging;
+	int			usb_charging;
+#endif
 };
+
+/*=============================================================*/
+/*  declaration of extension-qnovo.c                           */
+#ifdef CONFIG_LGE_PM
+static int qnovo_init_psy(struct qnovo *chip);
+static void set_qnovo_config(struct qnovo *chip);
+static void override_usb_debounce_work(struct work_struct *work);
+
+static bool done_pt_manager(struct qnovo *chip);
+static bool set_pt_manager(struct qnovo *chip, unsigned long en);
+
+static int override_qnovo5_update_status(struct qnovo *chip);
+static void override_status_change_work(struct work_struct *work);
+static irqreturn_t override_handle_ptrain_done(int irq, void *data);
+static int override_qnovo_disable_cb(
+	struct votable *votable, void *data, int disable, const char *client);
+
+static ssize_t qna_show(
+	struct class *c, struct class_attribute *attr, char *ubuf);
+static ssize_t qna_store(
+	struct class *c, struct class_attribute *attr, const char *ubuf, size_t count);
+#endif
+/*=============================================================*/
 
 static int debug_mask;
 module_param_named(debug_mask, debug_mask, int, 0600);
@@ -211,6 +247,8 @@ static int qnovo_batt_psy_update(struct qnovo *chip, bool disable)
 	return rc;
 }
 
+#ifdef CONFIG_LGE_PM
+#else
 static int qnovo_disable_cb(struct votable *votable, void *data, int disable,
 					const char *client)
 {
@@ -221,6 +259,7 @@ static int qnovo_disable_cb(struct votable *votable, void *data, int disable,
 	rc = qnovo_batt_psy_update(chip, disable);
 	return rc;
 }
+#endif
 
 static int pt_dis_votable_cb(struct votable *votable, void *data, int disable,
 					const char *client)
@@ -370,6 +409,12 @@ enum {
 	IBATT,
 	BATTTEMP,
 	BATTSOC,
+#ifdef CONFIG_LGE_PM
+	QNA_METER,
+	QNA_SAFETY,
+	QNA_VTWARN,
+	QNA_PCAP,
+#endif
 	MAX_PROP
 };
 
@@ -634,8 +679,13 @@ static struct param_info params[] = {
 		.units_str		= "uV",
 	},
 	[BATTSOC] = {
+#ifdef CONFIG_LGE_PM
+		.name			= "POWER_SUPPLY_PROP_CAPACITY_RAW",
+		.start_addr		= POWER_SUPPLY_PROP_CAPACITY_RAW,
+#else
 		.name			= "POWER_SUPPLY_PROP_CAPACITY",
 		.start_addr		= POWER_SUPPLY_PROP_CAPACITY,
+#endif
 		.units_str		= "%",
 	},
 };
@@ -677,6 +727,10 @@ static ssize_t ok_to_qnovo_show(struct class *c, struct class_attribute *attr,
 		cp_dis = get_effective_result(cp_disable_votable);
 		val = val && cp_dis;
 	}
+
+#ifdef CONFIG_LGE_PM
+	set_qnovo_config(chip);
+#endif
 
 	return scnprintf(buf, PAGE_SIZE, "%d\n", val);
 }
@@ -726,6 +780,10 @@ static ssize_t pt_enable_store(struct class *c, struct class_attribute *attr,
 
 	/* val being 0, userspace wishes to disable pt so vote true */
 	vote(chip->pt_dis_votable, QNI_PT_VOTER, val ? false : true, 0);
+
+#ifdef CONFIG_LGE_PM
+	set_pt_manager(chip, val);
+#endif
 
 	return count;
 }
@@ -815,6 +873,10 @@ static ssize_t reg_show(struct class *c, struct class_attribute *attr,
 {
 	struct qnovo *chip = container_of(c, struct qnovo, qnovo_class);
 	u8 buf[2] = {0, 0};
+#ifdef CONFIG_LGE_PM
+	u8 mask = ERR_BAT_OV | ERR_BATTERY_MISSING |
+			ERR_SAFETY_TIMER_EXPIRED | ERR_CHARGING_DISABLED;
+#endif
 	u16 regval;
 	int rc, i;
 
@@ -827,6 +889,13 @@ static ssize_t reg_show(struct class *c, struct class_attribute *attr,
 		pr_err("Couldn't read %s rc = %d\n", params[i].name, rc);
 		return -EINVAL;
 	}
+
+#ifdef CONFIG_LGE_PM
+	set_qnovo_config(chip);
+	if ( i == ERR_STS_REG )
+		buf[0] &= mask;
+#endif
+
 	regval = buf[1] << 8 | buf[0];
 
 	return snprintf(ubuf, PAGE_SIZE, "0x%04x\n", regval);
@@ -1079,6 +1148,12 @@ static ssize_t batt_prop_show(struct class *c, struct class_attribute *attr,
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_LGE_PM
+	if (prop == POWER_SUPPLY_PROP_CAPACITY_RAW) {
+		pval.intval = pval.intval * 100 / 255;
+	}
+#endif
+
 	return snprintf(ubuf, PAGE_SIZE, "%d\n", pval.intval);
 }
 
@@ -1114,6 +1189,12 @@ CLASS_ATTR_IDX_RO(VBATT_uV, batt_prop);
 CLASS_ATTR_IDX_RO(IBATT_uA, batt_prop);
 CLASS_ATTR_IDX_RO(BATTTEMP_deciDegC, batt_prop);
 CLASS_ATTR_IDX_RO(BATTSOC, batt_prop);
+#ifdef CONFIG_LGE_PM
+CLASS_ATTR_IDX_RW(QNA_METER, qna);
+CLASS_ATTR_IDX_RW(QNA_SAFETY, qna);
+CLASS_ATTR_IDX_RW(QNA_VTWARN, qna);
+CLASS_ATTR_IDX_RW(QNA_PCAP, qna);
+#endif
 
 static struct attribute *qnovo_class_attrs[] = {
 	[VER]			= &class_attr_version.attr,
@@ -1153,10 +1234,18 @@ static struct attribute *qnovo_class_attrs[] = {
 	[IBATT]			= &class_attr_IBATT_uA.attr,
 	[BATTTEMP]		= &class_attr_BATTTEMP_deciDegC.attr,
 	[BATTSOC]		= &class_attr_BATTSOC.attr,
+#ifdef CONFIG_LGE_PM
+	[QNA_METER]		= &class_attr_QNA_METER.attr,
+	[QNA_SAFETY]		= &class_attr_QNA_SAFETY.attr,
+	[QNA_VTWARN]		= &class_attr_QNA_VTWARN.attr,
+	[QNA_PCAP]		= &class_attr_QNA_PCAP.attr,
+#endif
 	NULL,
 };
 ATTRIBUTE_GROUPS(qnovo_class);
 
+#ifdef CONFIG_LGE_PM
+#else
 static void usb_debounce_work(struct work_struct *work)
 {
 	struct qnovo *chip = container_of(work,
@@ -1165,8 +1254,11 @@ static void usb_debounce_work(struct work_struct *work)
 	vote(chip->chg_ready_votable, USB_READY_VOTER, true, 0);
 	vote(chip->awake_votable, USB_READY_VOTER, false, 0);
 }
+#endif
 
 #define DEBOUNCE_MS 15000  /* 15 seconds */
+#ifdef CONFIG_LGE_PM
+#else
 static void status_change_work(struct work_struct *work)
 {
 	struct qnovo *chip = container_of(work,
@@ -1240,6 +1332,7 @@ static void status_change_work(struct work_struct *work)
 					!hw_ok_to_qnovo, 0);
 	}
 }
+#endif
 
 static int qnovo_notifier_call(struct notifier_block *nb,
 		unsigned long ev, void *v)
@@ -1258,6 +1351,8 @@ static int qnovo_notifier_call(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+#ifdef CONFIG_LGE_PM
+#else
 static irqreturn_t handle_ptrain_done(int irq, void *data)
 {
 	struct qnovo *chip = data;
@@ -1273,6 +1368,7 @@ static irqreturn_t handle_ptrain_done(int irq, void *data)
 	kobject_uevent(&chip->dev->kobj, KOBJ_CHANGE);
 	return IRQ_HANDLED;
 }
+#endif
 
 static int qnovo5_hw_init(struct qnovo *chip)
 {
@@ -1286,10 +1382,18 @@ static int qnovo5_hw_init(struct qnovo *chip)
 	vote(chip->pt_dis_votable, QNI_PT_VOTER, true, 0);
 	vote(chip->pt_dis_votable, QNOVO_OVERALL_VOTER, true, 0);
 
+#ifdef CONFIG_LGE_PM
+	vote(chip->chg_ready_votable, DC_READY_VOTER, false, 0);
+	/* allow charger error conditions to disable qnovo, CV mode excluded */
+	val = ERR_BAT_OV | ERR_BATTERY_MISSING |
+			ERR_SAFETY_TIMER_EXPIRED | ERR_CHARGING_DISABLED;
+#else
 	/* allow charger error conditions to disable qnovo, CV mode excluded */
 	val = ERR_JEITA_SOFT_CONDITION | ERR_BAT_OV |
 		ERR_BATTERY_MISSING | ERR_SAFETY_TIMER_EXPIRED |
 		ERR_CHARGING_DISABLED | ERR_JEITA_HARD_CONDITION;
+#endif
+
 	rc = qnovo5_write(chip, QNOVO_ERROR_MASK, &val, 1);
 	if (rc < 0) {
 		pr_err("Couldn't write QNOVO_ERROR_MASK rc = %d\n", rc);
@@ -1315,7 +1419,11 @@ static int qnovo5_register_notifier(struct qnovo *chip)
 
 static int qnovo5_determine_initial_status(struct qnovo *chip)
 {
+#ifdef CONFIG_LGE_PM
+	override_status_change_work(&chip->status_change_work);
+#else
 	status_change_work(&chip->status_change_work);
+#endif
 	return 0;
 }
 
@@ -1326,7 +1434,11 @@ static int qnovo5_request_interrupts(struct qnovo *chip)
 						"ptrain-done");
 
 	rc = devm_request_threaded_irq(chip->dev, irq_ptrain_done, NULL,
+#ifdef CONFIG_LGE_PM
+					override_handle_ptrain_done,
+#else
 					handle_ptrain_done,
+#endif
 					IRQF_TRIGGER_RISING | IRQF_ONESHOT,
 					"ptrain-done", chip);
 	if (rc < 0) {
@@ -1370,7 +1482,11 @@ static int qnovo5_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, chip);
 
 	chip->disable_votable = create_votable("QNOVO_DISABLE", VOTE_SET_ANY,
+#ifdef CONFIG_LGE_PM
+					override_qnovo_disable_cb, chip);
+#else
 					qnovo_disable_cb, chip);
+#endif
 	if (IS_ERR(chip->disable_votable)) {
 		rc = PTR_ERR(chip->disable_votable);
 		chip->disable_votable = NULL;
@@ -1411,8 +1527,14 @@ static int qnovo5_probe(struct platform_device *pdev)
 		goto destroy_chg_ready_votable;
 	}
 
+#ifdef CONFIG_LGE_PM
+	INIT_WORK(&chip->status_change_work, override_status_change_work);
+	INIT_DELAYED_WORK(&chip->usb_debounce_work, override_usb_debounce_work);
+	qnovo_init_psy(chip);
+#else
 	INIT_WORK(&chip->status_change_work, status_change_work);
 	INIT_DELAYED_WORK(&chip->usb_debounce_work, usb_debounce_work);
+#endif
 
 	rc = qnovo5_hw_init(chip);
 	if (rc < 0) {
@@ -1488,6 +1610,10 @@ static void qnovo5_shutdown(struct platform_device *pdev)
 
 	vote(chip->not_ok_to_qnovo_votable, SHUTDOWN_VOTER, true, 0);
 }
+
+#ifdef CONFIG_LGE_PM
+#include "../lge/extension-qni-a.c"
+#endif
 
 static const struct of_device_id match_table[] = {
 	{ .compatible = "qcom,qpnp-qnovo5", },

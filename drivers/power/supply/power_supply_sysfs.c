@@ -164,6 +164,12 @@ static ssize_t power_supply_show_property(struct device *dev,
 		ret = sprintf(buf, "%s\n",
 			      power_supply_status_text[value.intval]);
 		break;
+#ifdef CONFIG_LGE_PM
+	case POWER_SUPPLY_PROP_STATUS_RAW:
+		ret = sprintf(buf, "%s\n",
+			       power_supply_status_text[value.intval]);
+		break;
+#endif
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		ret = sprintf(buf, "%s\n",
 			      power_supply_charge_type_text[value.intval]);
@@ -178,7 +184,11 @@ static ssize_t power_supply_show_property(struct device *dev,
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
 		ret = sprintf(buf, "%s\n",
+#ifdef CONFIG_LGE_PM
+			      power_supply_capacity_level_text[0]);
+#else
 			      power_supply_capacity_level_text[value.intval]);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
 	case POWER_SUPPLY_PROP_REAL_TYPE:
@@ -283,6 +293,9 @@ static ssize_t power_supply_store_property(struct device *dev,
 static struct device_attribute power_supply_attrs[] = {
 	/* Properties of type `int' */
 	POWER_SUPPLY_ATTR(status),
+#ifdef CONFIG_LGE_PM
+	POWER_SUPPLY_ATTR(status_raw),
+#endif
 	POWER_SUPPLY_ATTR(charge_type),
 	POWER_SUPPLY_ATTR(health),
 	POWER_SUPPLY_ATTR(present),
@@ -435,6 +448,11 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(parallel_fcc_max),
 	POWER_SUPPLY_ATTR(min_icl),
 	POWER_SUPPLY_ATTR(moisture_detected),
+#ifdef CONFIG_LGE_USB_MOISTURE_DETECTION
+	POWER_SUPPLY_ATTR(moisture_detection_en),
+	POWER_SUPPLY_ATTR(moisture_detection_ux),
+	POWER_SUPPLY_ATTR(moisture_detection_usb),
+#endif
 	POWER_SUPPLY_ATTR(batt_profile_version),
 	POWER_SUPPLY_ATTR(batt_full_current),
 	POWER_SUPPLY_ATTR(recharge_soc),
@@ -614,6 +632,15 @@ int power_supply_uevent(struct device *dev, struct kobj_uevent_env *env)
 		if (ret)
 			goto out;
 	}
+
+#ifdef CONFIG_LGE_PM_VENEER_PSY
+	{	extern bool veneer_uevent_duplicated(const char* sender, char* data, int length);
+		if (veneer_uevent_duplicated(psy->desc->name, env->buf, env->buflen-1)) {
+			pr_debug("an UEVENT for %s is skipped\n", psy->desc->name);
+			ret = -ENOTSYNC;
+		}
+	}
+#endif
 
 out:
 	free_page((unsigned long)prop_buf);

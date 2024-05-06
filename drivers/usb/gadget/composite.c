@@ -20,6 +20,17 @@
 
 #include "u_os_desc.h"
 
+#ifdef CONFIG_LGE_USB_GADGET
+#include <linux/power_supply.h>
+#endif
+
+#ifdef CONFIG_LGE_USB_GADGET_MULTI_CONFIG
+static bool disable_multi_config;
+module_param(disable_multi_config, bool, 0644);
+MODULE_PARM_DESC(disable_multi_config,
+	"Disable support for Multiple Configuration");
+#endif
+
 /**
  * struct usb_os_string - represents OS String to be reported by a gadget
  * @bLength: total length of the entire descritor, always 0x12
@@ -661,6 +672,11 @@ static int config_buf(struct usb_configuration *config,
 	list_for_each_entry(f, &config->functions, list) {
 		struct usb_descriptor_header **descriptors;
 
+#ifdef CONFIG_LGE_USB_GADGET_MULTI_CONFIG
+		if (config->cdev->is_mac_os && f->set_mac_os)
+			f->set_mac_os(f);
+#endif
+
 		descriptors = function_descriptors(f, speed);
 		if (!descriptors)
 			continue;
@@ -945,6 +961,12 @@ static int set_config(struct usb_composite_dev *cdev,
 	int			tmp;
 
 	if (number) {
+#ifdef CONFIG_LGE_USB_GADGET_MULTI_CONFIG
+		if ((disable_multi_config || cdev->disable_multi_config) &&
+		    (number > 1))
+			goto done;
+#endif
+
 		list_for_each_entry(c, &cdev->configs, list) {
 			if (c->bConfigurationValue == number) {
 				/*
@@ -983,6 +1005,11 @@ static int set_config(struct usb_composite_dev *cdev,
 
 		if (!f)
 			break;
+
+#ifdef CONFIG_LGE_USB_GADGET_MULTI_CONFIG
+		if (f->set_config)
+			f->set_config(f, number);
+#endif
 
 		/*
 		 * Record which endpoints are used by the function. This is used
@@ -1618,6 +1645,15 @@ static int count_ext_compat(struct usb_configuration *c)
 		}
 	}
 	BUG_ON(res > 255);
+#ifdef CONFIG_LGE_USB
+	/*
+	 * NOTE: On Windows 10, if you respond to more than one
+	 * "extended compatibility ID", there is a problem that
+	 * the USB is not recognized.
+	 */
+	if (res > 1)
+		return 1;
+#endif
 	return res;
 }
 
@@ -1830,6 +1866,14 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 					cdev->desc.bcdUSB = cpu_to_le16(0x0200);
 			}
 
+#ifdef CONFIG_LGE_USB_GADGET_MULTI_CONFIG
+			if (w_length < (u16) sizeof cdev->desc)
+				cdev->disable_multi_config = true;
+
+			if (disable_multi_config || cdev->disable_multi_config)
+				cdev->desc.bNumConfigurations = 1;
+#endif
+
 			value = min(w_length, (u16) sizeof cdev->desc);
 			memcpy(req->buf, &cdev->desc, value);
 			break;
@@ -1852,6 +1896,11 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 				value = min(w_length, (u16) value);
 			break;
 		case USB_DT_STRING:
+#ifdef CONFIG_LGE_USB_GADGET_MULTI_CONFIG
+			DBG(cdev, "USB_DT_STRING w_length: %02X\n", w_length);
+			if (w_length == 0x02) /* MAC OS TYPE */
+				cdev->is_mac_os = true;
+#endif
 			spin_lock(&cdev->lock);
 			value = get_string(cdev, req->buf,
 					w_index, w_value & 0xff);
@@ -1860,8 +1909,12 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 				value = min(w_length, (u16) value);
 			break;
 		case USB_DT_BOS:
+#ifdef CONFIG_LGE_USB_GADGET
+			if (le16_to_cpu(cdev->desc.bcdUSB) > 0x0200) {
+#else
 			if (gadget_is_superspeed(gadget) ||
 			    gadget->lpm_capable) {
+#endif
 				value = bos_desc(cdev);
 				value = min(w_length, (u16) value);
 			}
@@ -2020,6 +2073,25 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			if (!cdev->config || intf >= MAX_CONFIG_INTERFACES)
 				break;
 			f = cdev->config->interface[intf];
+#ifdef CONFIG_LGE_USB_GADGET_MULTI_CONFIG
+			/* XXX:
+			 * Chater 9 Tests[USB 3 Gen X devices]
+			 * TD 9.14 Suspend/Resume Test
+			 *
+			 * After the re-enumeration, the Configuration Value is
+			 * set to 1 and it fails. Modify it to reference other
+			 * Configuration values as well.
+			 */
+			if (!f) {
+				struct usb_configuration *c = NULL;
+
+				list_for_each_entry(c, &cdev->configs, list) {
+					f = c->interface[intf];
+					if (f)
+						break;
+				}
+			}
+#endif
 			if (!f)
 				break;
 			value = 0;
@@ -2227,6 +2299,10 @@ void composite_disconnect(struct usb_gadget *gadget)
 		reset_config(cdev);
 	if (cdev->driver->disconnect)
 		cdev->driver->disconnect(cdev);
+#ifdef CONFIG_LGE_USB_GADGET_MULTI_CONFIG
+	cdev->is_mac_os = false;
+	cdev->disable_multi_config = false;
+#endif
 	spin_unlock_irqrestore(&cdev->lock, flags);
 }
 

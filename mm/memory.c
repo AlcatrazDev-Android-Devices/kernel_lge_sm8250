@@ -190,11 +190,13 @@ void sync_mm_rss(struct mm_struct *mm)
 
 static void add_mm_counter_fast(struct mm_struct *mm, int member, int val)
 {
+#ifndef CONFIG_MACH_LGE
 	struct task_struct *task = current;
 
 	if (likely(task->mm == mm))
 		task->rss_stat.count[member] += val;
 	else
+#endif
 		add_mm_counter(mm, member, val);
 }
 #define inc_mm_counter_fast(mm, member) add_mm_counter_fast(mm, member, 1)

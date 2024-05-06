@@ -1075,9 +1075,11 @@ kgsl_sharedmem_page_alloc_user(struct kgsl_memdesc *memdesc,
 	 */
 	if (align < ilog2(SZ_1M))
 		align = ilog2(SZ_1M);
-
+#ifndef CONFIG_ALLOC_BUFFERS_IN_4K_CHUNKS
 	page_size = kgsl_get_page_size(size, align, memdesc);
-
+#else
+	page_size = kgsl_get_page_size(size, align);
+#endif
 	/*
 	 * The alignment cannot be less than the intended page size - it can be
 	 * larger however to accommodate hardware quirks
@@ -1161,7 +1163,11 @@ kgsl_sharedmem_page_alloc_user(struct kgsl_memdesc *memdesc,
 		memdesc->page_count += page_count;
 
 		/* Get the needed page size for the next iteration */
+#ifndef CONFIG_ALLOC_BUFFERS_IN_4K_CHUNKS
 		page_size = kgsl_get_page_size(len, align, memdesc);
+#else
+		page_size = kgsl_get_page_size(len, align);
+#endif
 	}
 
 	/* Call to the hypervisor to lock any secure buffer allocations */

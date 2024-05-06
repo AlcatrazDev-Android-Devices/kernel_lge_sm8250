@@ -83,7 +83,11 @@ struct inet_request_sock {
 #define ireq_state		req.__req_common.skc_state
 #define ireq_family		req.__req_common.skc_family
 
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+	u32			snd_wscale : 4,
+#else
 	u16			snd_wscale : 4,
+#endif
 				rcv_wscale : 4,
 				tstamp_ok  : 1,
 				sack_ok	   : 1,
@@ -91,6 +95,10 @@ struct inet_request_sock {
 				ecn_ok	   : 1,
 				acked	   : 1,
 				no_srccheck: 1,
+#ifdef CONFIG_LGP_DATA_TCPIP_MPTCP
+				mptcp_rqsk : 1,
+				saw_mpc    : 1,
+#endif
 				smc_ok	   : 1;
 	u32                     ir_mark;
 	union {

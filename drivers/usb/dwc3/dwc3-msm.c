@@ -40,6 +40,10 @@
 #include <linux/reset.h>
 #include <linux/clk/qcom.h>
 
+#ifdef CONFIG_LGE_DUAL_SCREEN
+#include <linux/lge_ds3.h>
+#endif
+
 #include "power.h"
 #include "core.h"
 #include "gadget.h"
@@ -384,6 +388,9 @@ static void dwc3_msm_notify_event(struct dwc3 *dwc, unsigned int event,
 						unsigned int value);
 static int dwc3_usb_blocking_sync(struct notifier_block *nb,
 					unsigned long event, void *ptr);
+#ifdef CONFIG_LGE_USB
+static int get_psy_type(struct dwc3_msm *mdwc);
+#endif
 
 /**
  *
@@ -2111,6 +2118,10 @@ static void dwc3_msm_notify_event(struct dwc3 *dwc, unsigned int event,
 			dwc->gadget.is_selfpowered = val.intval;
 		else
 			dwc->gadget.is_selfpowered = 0;
+#ifdef CONFIG_LGE_USB
+		if (get_psy_type(mdwc) == POWER_SUPPLY_TYPE_USB_PD)
+			dwc->gadget.is_selfpowered = 1;
+#endif
 		break;
 	case DWC3_CONTROLLER_NOTIFY_OTG_EVENT:
 		dev_dbg(mdwc->dev, "DWC3_CONTROLLER_NOTIFY_OTG_EVENT received\n");
@@ -2502,6 +2513,13 @@ static int dwc3_msm_update_bus_bw(struct dwc3_msm *mdwc, enum bus_vote bv)
 
 	if (!mdwc->bus_perf_client)
 		return 0;
+
+#ifdef CONFIG_LGE_USB
+	if (dwc->usb_compliance_mode &&
+	    *dwc->usb_compliance_mode &&
+	    (mdwc->hs_phy->flags & PHY_HOST_MODE))
+		return 0;
+#endif
 
 	dbg_event(0xFF, "bus_vote_start", bv);
 
@@ -3024,6 +3042,19 @@ static void dwc3_resume_work(struct work_struct *w)
 	dwc->maximum_speed = dwc->max_hw_supp_speed;
 	/* Check speed and Type-C polarity values in order to configure PHY */
 	if (edev && extcon_get_state(edev, extcon_id)) {
+#ifdef CONFIG_LGE_DUAL_SCREEN
+		if (check_ds_connect_state() >= DS_STATE_DP_CONNECTED) {
+			dev_info(mdwc->dev, "%s: DS is working "
+					"limit USB Speed to High Speed.\n",
+					__func__);
+			mdwc->override_usb_speed = USB_SPEED_HIGH;
+		} else {
+			mdwc->override_usb_speed  = 0;
+		}
+#endif
+		dwc->maximum_speed = dwc->max_hw_supp_speed;
+		dwc->gadget.max_speed = dwc->maximum_speed;
+
 		ret = extcon_get_property(edev, extcon_id,
 				EXTCON_PROP_USB_SS, &val);
 
@@ -3046,6 +3077,10 @@ static void dwc3_resume_work(struct work_struct *w)
 			dwc->gadget.is_selfpowered = val.intval;
 		else
 			dwc->gadget.is_selfpowered = 0;
+#ifdef CONFIG_LGE_USB
+		if (get_psy_type(mdwc) == POWER_SUPPLY_TYPE_USB_PD)
+			dwc->gadget.is_selfpowered = 1;
+#endif
 	}
 
 skip_update:
@@ -3331,7 +3366,11 @@ static int dwc3_msm_id_notifier(struct notifier_block *nb,
 
 	mdwc->ext_idx = enb->idx;
 
+#ifdef CONFIG_LGE_USB
+	dev_info(mdwc->dev, "host:%ld (id:%d) event received\n", event, id);
+#else
 	dev_dbg(mdwc->dev, "host:%ld (id:%d) event received\n", event, id);
+#endif
 
 	mdwc->id_state = id;
 	dbg_event(0xFF, "id_state", mdwc->id_state);
@@ -3628,11 +3667,18 @@ static ssize_t usb_compliance_mode_store(struct device *dev,
 {
 	int ret = 0;
 	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
+#ifdef CONFIG_LGE_USB
+	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
+#endif
 
 	ret = strtobool(buf, &mdwc->usb_compliance_mode);
 
 	if (ret)
 		return ret;
+
+#ifdef CONFIG_LGE_USB
+	*(dwc->usb_compliance_mode) = mdwc->usb_compliance_mode;
+#endif
 
 	return count;
 }
@@ -3697,6 +3743,55 @@ static ssize_t bus_vote_store(struct device *dev,
 	return count;
 }
 static DEVICE_ATTR_RW(bus_vote);
+
+#ifdef CONFIG_LGE_USB
+static char * dwc3_revision(struct dwc3 *dwc)
+{
+	switch (dwc->revision) {
+	case DWC3_REVISION_173A: return "DWC3_REVISION_173A";
+	case DWC3_REVISION_175A: return "DWC3_REVISION_175A";
+	case DWC3_REVISION_180A: return "DWC3_REVISION_180A";
+	case DWC3_REVISION_183A: return "DWC3_REVISION_183A";
+	case DWC3_REVISION_185A: return "DWC3_REVISION_185A";
+	case DWC3_REVISION_187A: return "DWC3_REVISION_187A";
+	case DWC3_REVISION_188A: return "DWC3_REVISION_188A";
+	case DWC3_REVISION_190A: return "DWC3_REVISION_190A";
+	case DWC3_REVISION_194A: return "DWC3_REVISION_194A";
+	case DWC3_REVISION_200A: return "DWC3_REVISION_200A";
+	case DWC3_REVISION_202A: return "DWC3_REVISION_202A";
+	case DWC3_REVISION_210A: return "DWC3_REVISION_210A";
+	case DWC3_REVISION_220A: return "DWC3_REVISION_220A";
+	case DWC3_REVISION_230A: return "DWC3_REVISION_230A";
+	case DWC3_REVISION_240A: return "DWC3_REVISION_240A";
+	case DWC3_REVISION_250A: return "DWC3_REVISION_250A";
+	case DWC3_REVISION_260A: return "DWC3_REVISION_260A";
+	case DWC3_REVISION_270A: return "DWC3_REVISION_270A";
+	case DWC3_REVISION_280A: return "DWC3_REVISION_280A";
+	case DWC3_REVISION_290A: return "DWC3_REVISION_290A";
+	case DWC3_REVISION_300A: return "DWC3_REVISION_300A";
+	case DWC3_REVISION_310A: return "DWC3_REVISION_310A";
+	case DWC3_REVISION_330A: return "DWC3_REVISION_330A";
+	case DWC3_REVISION_IS_DWC31:   return "DWC3_REVISION_IS_DWC31";
+	case DWC3_USB31_REVISION_110A: return "DWC3_USB31_REVISION_110A";
+	case DWC3_USB31_REVISION_120A: return "DWC3_USB31_REVISION_120A";
+	case DWC3_USB31_REVISION_170A: return "DWC3_USB31_REVISION_170A";
+	case DWC3_USB31_REVISION_180A: return "DWC3_USB31_REVISION_180A";
+	case DWC3_USB31_REVISION_190A: return "DWC3_USB31_REVISION_190A";
+	default: return "Unknown";
+	}
+}
+
+static ssize_t usb_controller_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
+	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
+
+	return snprintf(buf, PAGE_SIZE, "%s\n",
+			dwc3_revision(dwc));
+}
+static DEVICE_ATTR_RO(usb_controller);
+#endif
 
 static int dwc_dpdm_cb(struct notifier_block *nb, unsigned long evt, void *p)
 {
@@ -4131,6 +4226,10 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	device_create_file(&pdev->dev, &dev_attr_usb_compliance_mode);
 	device_create_file(&pdev->dev, &dev_attr_bus_vote);
 	device_create_file(&pdev->dev, &dev_attr_usb_data_enabled);
+#ifdef CONFIG_LGE_USB
+	device_create_file(&pdev->dev, &dev_attr_usb_controller);
+	dwc->usb_compliance_mode = &mdwc->usb_compliance_mode;
+#endif
 
 	return 0;
 
@@ -4154,6 +4253,9 @@ static int dwc3_msm_remove(struct platform_device *pdev)
 
 	device_remove_file(&pdev->dev, &dev_attr_mode);
 	device_remove_file(&pdev->dev, &dev_attr_usb_data_enabled);
+#ifdef CONFIG_LGE_USB
+	device_remove_file(&pdev->dev, &dev_attr_usb_controller);
+#endif
 
 	if (mdwc->dpdm_nb.notifier_call) {
 		regulator_unregister_notifier(mdwc->dpdm_reg, &mdwc->dpdm_nb);
@@ -4350,7 +4452,7 @@ static int dwc3_otg_start_host(struct dwc3_msm *mdwc, int on)
 	}
 
 	if (on) {
-		dev_dbg(mdwc->dev, "%s: turn on host\n", __func__);
+		dev_info(mdwc->dev, "%s: turn on host\n", __func__);
 
 		mdwc->hs_phy->flags |= PHY_HOST_MODE;
 		pm_runtime_get_sync(mdwc->dev);
@@ -4434,7 +4536,7 @@ static int dwc3_otg_start_host(struct dwc3_msm *mdwc, int on)
 		schedule_delayed_work(&mdwc->perf_vote_work,
 				msecs_to_jiffies(1000 * PM_QOS_SAMPLE_SEC));
 	} else {
-		dev_dbg(mdwc->dev, "%s: turn off host\n", __func__);
+		dev_info(mdwc->dev, "%s: turn off host\n", __func__);
 
 		usb_unregister_atomic_notify(&mdwc->usbdev_nb);
 		if (!IS_ERR_OR_NULL(mdwc->vbus_reg))
@@ -4510,7 +4612,7 @@ static int dwc3_otg_start_peripheral(struct dwc3_msm *mdwc, int on)
 		atomic_read(&mdwc->dev->power.usage_count));
 
 	if (on) {
-		dev_dbg(mdwc->dev, "%s: turn on gadget %s\n",
+		dev_info(mdwc->dev, "%s: turn on gadget %s\n",
 					__func__, dwc->gadget.name);
 
 		dwc3_override_vbus_status(mdwc, true);
@@ -4553,7 +4655,7 @@ static int dwc3_otg_start_peripheral(struct dwc3_msm *mdwc, int on)
 		schedule_delayed_work(&mdwc->perf_vote_work,
 				msecs_to_jiffies(1000 * PM_QOS_SAMPLE_SEC));
 	} else {
-		dev_dbg(mdwc->dev, "%s: turn off gadget %s\n",
+		dev_info(mdwc->dev, "%s: turn off gadget %s\n",
 					__func__, dwc->gadget.name);
 		cancel_delayed_work_sync(&mdwc->perf_vote_work);
 		msm_dwc3_perf_vote_update(mdwc, false);
@@ -4638,8 +4740,34 @@ static int dwc3_msm_gadget_vbus_draw(struct dwc3_msm *mdwc, unsigned int mA)
 {
 	union power_supply_propval pval = {0};
 	int ret, psy_type;
+#ifdef CONFIG_LGE_USB
+	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
+#endif
 
 	psy_type = get_psy_type(mdwc);
+#ifdef CONFIG_LGE_USB
+	if (psy_type == POWER_SUPPLY_TYPE_USB_PD) {
+		if (!(dwc->usb_compliance_mode && *dwc->usb_compliance_mode))
+			return 0;
+
+		ret = power_supply_get_property(mdwc->usb_psy,
+				POWER_SUPPLY_PROP_PD_CURRENT_MAX, &pval);
+		if (ret) {
+			dev_dbg(mdwc->dev, "power supply error when getting pd property\n");
+			return ret;
+		}
+
+		if ((1000 * mA) == pval.intval)
+			return 0;
+
+		if ((mA > 25) && ((1000 * mA) < pval.intval))
+			return 0;
+
+		dev_info(mdwc->dev, "Avail curr from USB_PD = %u\n", mA);
+		pval.intval = 1000 * mA;
+		goto set_pd_prop;
+	} else
+#endif
 	if (psy_type == POWER_SUPPLY_TYPE_USB_FLOAT) {
 		/*
 		 * Do not notify charger driver for any current and
@@ -4663,6 +4791,19 @@ static int dwc3_msm_gadget_vbus_draw(struct dwc3_msm *mdwc, unsigned int mA)
 	pval.intval = 1000 * mA;
 
 set_prop:
+#ifdef CONFIG_LGE_USB
+	/*
+	 * XXX:
+	 * According to LG Spec, USB current is not set below 500mA.
+	 */
+	if (!(dwc->usb_compliance_mode &&
+	      *dwc->usb_compliance_mode) &&
+	    (pval.intval >= 0 && pval.intval < 500000)) {
+		dev_info(mdwc->dev, "Override avail curr from USB = 500\n");
+		pval.intval = 500000;
+	}
+#endif
+
 	dev_info(mdwc->dev, "Avail curr from USB = %u\n", mA);
 	ret = power_supply_set_property(mdwc->usb_psy,
 				POWER_SUPPLY_PROP_SDP_CURRENT_MAX, &pval);
@@ -4673,6 +4814,19 @@ set_prop:
 
 	mdwc->max_power = mA;
 	return 0;
+
+#ifdef CONFIG_LGE_USB
+set_pd_prop:
+	ret = power_supply_set_property(mdwc->usb_psy,
+			POWER_SUPPLY_PROP_PD_CURRENT_MAX, &pval);
+	if (ret) {
+		dev_dbg(mdwc->dev, "power supply error when setting pd property\n");
+		return ret;
+	}
+
+	mdwc->max_power = mA;
+	return 0;
+#endif
 }
 
 
@@ -4701,7 +4855,11 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 	}
 
 	state = dwc3_drd_state_string(mdwc->drd_state);
+#ifdef CONFIG_LGE_USB
+	dev_info(mdwc->dev, "%s state\n", state);
+#else
 	dev_dbg(mdwc->dev, "%s state\n", state);
+#endif
 	dbg_event(0xFF, state, 0);
 
 	/* Check OTG state */
@@ -4761,6 +4919,15 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			dwc3_otg_start_peripheral(mdwc, 1);
 			mdwc->drd_state = DRD_STATE_PERIPHERAL;
 			work = 1;
+#ifdef CONFIG_LGE_USB
+			/*
+			 * XXX:
+			 * Set USB current to 500mA according to LG Spec.
+			 */
+			if (!dwc->usb_compliance_mode ||
+			    !(*dwc->usb_compliance_mode))
+				dwc3_msm_gadget_vbus_draw(mdwc, 500);
+#endif
 		} else {
 			if (mdwc->usb_data_enabled)
 				dwc3_msm_gadget_vbus_draw(mdwc, 0);

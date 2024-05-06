@@ -152,6 +152,16 @@ config QTI_LIMITS_ISENSE_CDSP
           driver is required for the chipsets where isense hardware is present
           as part of cdsp subsystem.
 
+config LGE_VIRTUAL_SENSOR
+	bool "LGE Virtual Sensor driver"
+	depends on THERMAL_OF
+	help
+	  This driver has the information about the virtual sensors used by
+	  QTI chipset's and registers the virtual sensors to a thermal zone.
+	  The virtual sensor information includes the underlying thermal
+	  sensors to query for temperature and the aggregation logic to
+	  determine the virtual sensor temperature.
+
 config QTI_CX_IPEAK_COOLING_DEVICE
 	bool "CX IPeak cooling device"
 	depends on THERMAL_OF

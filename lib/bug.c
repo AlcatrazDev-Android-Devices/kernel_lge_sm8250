@@ -145,6 +145,7 @@ enum bug_trap_type report_bug(unsigned long bugaddr, struct pt_regs *regs)
 	struct bug_entry *bug;
 	const char *file;
 	unsigned line, warning, once, done;
+	static int report_once;
 
 	if (!is_valid_bugaddr(bugaddr))
 		return BUG_TRAP_TYPE_NONE;
@@ -185,6 +186,9 @@ enum bug_trap_type report_bug(unsigned long bugaddr, struct pt_regs *regs)
 		return BUG_TRAP_TYPE_WARN;
 	}
 
+	if (report_once)
+		return BUG_TRAP_TYPE_BUG;
+
 	printk(KERN_DEFAULT CUT_HERE);
 
 	if (file)
@@ -193,6 +197,7 @@ enum bug_trap_type report_bug(unsigned long bugaddr, struct pt_regs *regs)
 		pr_crit("Kernel BUG at %pB [verbose debug info unavailable]\n",
 			(void *)bugaddr);
 
+	report_once++;
 	return BUG_TRAP_TYPE_BUG;
 }
 

@@ -360,8 +360,12 @@ done:
 	return pcount;
 
 eagain:
+#ifndef CONFIG_ALLOC_BUFFERS_IN_4K_CHUNKS
 	*page_size = kgsl_get_page_size(size,
 			ilog2(size), memdesc);
+#else
+	*page_size = kgsl_get_page_size(size, ilog2(size));
+#endif
 	*align = ilog2(*page_size);
 	return -EAGAIN;
 }

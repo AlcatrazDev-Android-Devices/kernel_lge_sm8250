@@ -18,8 +18,13 @@ usb_f_obex-y			:= f_obex.o
 obj-$(CONFIG_USB_F_OBEX)	+= usb_f_obex.o
 obj-$(CONFIG_USB_U_ETHER)	+= u_ether.o
 obj-$(CONFIG_USB_RNDIS)		+= rndis.o
+ifeq ($(CONFIG_LGE_USB_GADGET), y)
+usb_f_ncm_lge-y			:= f_ncm_lge.o
+obj-$(CONFIG_USB_F_NCM)		+= usb_f_ncm_lge.o
+else
 usb_f_ncm-y			:= f_ncm.o
 obj-$(CONFIG_USB_F_NCM)		+= usb_f_ncm.o
+endif
 usb_f_ecm-y			:= f_ecm.o
 obj-$(CONFIG_USB_F_ECM)		+= usb_f_ecm.o
 usb_f_phonet-y			:= f_phonet.o
@@ -69,6 +74,8 @@ usb_f_mtp-y			:= f_mtp.o
 obj-$(CONFIG_USB_F_MTP)		+= usb_f_mtp.o
 usb_f_ptp-y			:= f_ptp.o
 obj-$(CONFIG_USB_F_PTP)		+= usb_f_ptp.o
+usb_f_laf-y         := f_laf.o
+obj-$(CONFIG_LGE_USB_F_LAF) += usb_f_laf.o
 usb_f_qcrndis-y			:= f_qc_rndis.o u_data_ipa.o
 obj-$(CONFIG_USB_F_QCRNDIS)	+= usb_f_qcrndis.o
 usb_f_rmnet_bam-y               := f_rmnet.o u_ctrl_qti.o u_bam_dmux.o

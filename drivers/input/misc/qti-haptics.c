@@ -2,7 +2,6 @@
 /*
  * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  */
-
 #include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/err.h>
@@ -22,6 +21,8 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
+
+#define PM8150B_SYSFS
 
 enum actutor_type {
 	ACT_LRA,
@@ -228,6 +229,168 @@ static int wf_repeat[8] = {1, 2, 4, 8, 16, 32, 64, 128};
 static int wf_s_repeat[4] = {1, 2, 4, 8};
 const static char * const wf_src_str[] = {"vmax", "buffer", "audio", "pwm"};
 
+#ifdef PM8150B_SYSFS
+static int qti_haptics_play(struct qti_hap_chip *chip, bool play);
+static int qti_haptics_module_en(struct qti_hap_chip *chip, bool en);
+static int qti_haptics_write(struct qti_hap_chip *chip, u8 addr, u8 *val, int len);
+static int qti_haptics_masked_write(struct qti_hap_chip *chip, u8 addr, u8 mask, u8 val);
+static int qti_haptics_read(struct qti_hap_chip *chip, u8 addr, u8 *val, int len);
+static int qti_haptics_lra_auto_res_enable(struct qti_hap_chip *chip, bool en);
+
+static unsigned vmax_mv_test;
+
+static ssize_t pm8150b_vmax_registers_show(struct device *dev,
+                  struct device_attribute *attr, char *buf)
+{
+
+	struct qti_hap_chip *chip = dev_get_drvdata(dev);
+	u8 addr, val;
+	int rc;
+
+	addr = REG_HAP_VMAX_CFG;
+	rc = qti_haptics_read(chip, addr, &val, 1);
+	if (rc < 0) {
+		dev_err(chip->dev, "read HAP_STATUS1 failed, rc=%d\n", rc);
+		return -1;
+	}
+	pr_err("%s: input-data=%u, reg-data:%u\n", __func__, vmax_mv_test, val);
+	return snprintf(buf, sizeof(buf), "%u\n", vmax_mv_test);
+}
+
+static ssize_t pm8150b_vmax_registers_store(struct device *dev,
+                   struct device_attribute *attr,
+                   const char *buf, size_t count)
+{
+	struct qti_hap_chip *chip = dev_get_drvdata(dev);
+	u8 addr, mask, val;
+	int rc;
+
+	rc = sscanf(buf, "%u", &vmax_mv_test);
+	if (rc != 1) {
+		pr_err("%s:unable to parse input\n", __func__);
+        return -1;
+    }
+
+	addr = REG_HAP_VMAX_CFG;
+	mask = HAP_VMAX_MV_MASK;
+	val = (vmax_mv_test / HAP_VMAX_MV_LSB) << HAP_VMAX_MV_SHIFT;
+
+	if( val == 0 )	return -1;
+	rc = qti_haptics_masked_write(chip, addr, mask, val);
+	if (rc < 0)
+		dev_err(chip->dev, "write VMAX_CFG failed, rc=%d\n", rc);
+
+	pr_err("%s: vmax_mv_test=%u, val=%u\n", __func__, vmax_mv_test, val);
+	return count;
+}
+
+static DEVICE_ATTR(pm8150b_vmax_registers, S_IWUSR | S_IRUGO,
+        pm8150b_vmax_registers_show, pm8150b_vmax_registers_store);
+
+static unsigned play_rate_us_test;
+
+static ssize_t pm8150b_freq_registers_show(struct device *dev,
+                  struct device_attribute *attr, char *buf)
+{
+	struct qti_hap_chip *chip = dev_get_drvdata(dev);
+	u8 addr, val[2];
+	int rc;
+
+	addr = REG_HAP_RATE_CFG1;
+	rc = qti_haptics_read(chip, addr, val, 2);
+	if (rc < 0) {
+		dev_err(chip->dev, "read HAP_STATUS1 failed, rc=%d\n", rc);
+		return -1;;
+	}
+	pr_err("%s: input-data=%u, reg-data:%u, %u\n", __func__, play_rate_us_test, val[0], val[1]);
+	return snprintf(buf, sizeof(buf), "%u\n", play_rate_us_test);
+}
+
+static ssize_t pm8150b_freq_registers_store(struct device *dev,
+                   struct device_attribute *attr,
+                   const char *buf, size_t count)
+{
+	struct qti_hap_chip *chip = dev_get_drvdata(dev);
+	u8 addr, val[2];
+	int tmp, rc;
+
+	// disable auto-resonance mode
+	qti_haptics_lra_auto_res_enable(chip, false);
+
+	rc = sscanf(buf, "%u", &play_rate_us_test);
+	if (rc != 1) {
+		pr_err("%s:unable to parse input\n", __func__);
+        return -1;
+    }
+
+	addr = REG_HAP_RATE_CFG1;
+	tmp = play_rate_us_test / HAP_PLAY_RATE_US_LSB;
+	val[0] = tmp & 0xff;
+	val[1] = (tmp >> 8) & 0xf;
+	rc = qti_haptics_write(chip, addr, val, 2);
+	if (rc < 0)
+		dev_err(chip->dev, "write play_rate failed, rc=%d\n", rc);
+
+	pr_err("%s: ,play_rate_us_test=%u, tmp=%d, val[0]=%u, val[1]=%u\n",
+							__func__, play_rate_us_test, tmp, val[0], val[1]);
+	return count;
+}
+
+static DEVICE_ATTR(pm8150b_freq_registers, S_IWUSR | S_IRUGO,
+        pm8150b_freq_registers_show, pm8150b_freq_registers_store);
+
+static ssize_t pm8150b_haptic_onoff_show(struct device *dev,
+                  struct device_attribute *attr, char *buf)
+{
+	return -1;
+}
+
+static ssize_t pm8150b_haptic_onoff_store(struct device *dev,
+                   struct device_attribute *attr,
+                   const char *buf, size_t count)
+{
+	struct qti_hap_chip *chip = dev_get_drvdata(dev);
+    unsigned value;
+	int rc;
+
+    rc = sscanf(buf, "%d", &value);
+	if (rc != 1) {
+		pr_err("%s:unable to parse input\n", __func__);
+        return -1;
+    }
+
+	if (value == 0) {
+		pr_err("%s: value = %d\n", __func__, value);
+		qti_haptics_play(chip, false);
+		qti_haptics_module_en(chip, false);
+		return count;
+	} else if (value == 1){
+		pr_err("%s: value = %d\n", __func__, value);
+		qti_haptics_module_en(chip, true);
+		qti_haptics_play(chip, true);
+		return count;
+	}
+
+	pr_err("%s:no control haptics %d, count = %d\n", __func__, value, count);
+	return -1;
+}
+
+static DEVICE_ATTR(pm8150b_haptic_onoff, S_IWUSR | S_IRUGO,
+	pm8150b_haptic_onoff_show, pm8150b_haptic_onoff_store);
+
+static struct attribute *pm8150b_attrs[] = {
+	&dev_attr_pm8150b_freq_registers.attr,
+	&dev_attr_pm8150b_vmax_registers.attr,
+	&dev_attr_pm8150b_haptic_onoff.attr,
+	NULL
+};
+
+static struct attribute_group pm8150b_attr_group = {
+    .attrs = pm8150b_attrs,
+};
+#endif // End of #ifdef PM8150B_SYSFS
+
+
 static inline bool is_secure(u8 addr)
 {
 	return ((addr & 0xFF) > 0xD0);
@@ -258,7 +421,7 @@ static int qti_haptics_write(struct qti_hap_chip *chip,
 
 	spin_lock_irqsave(&chip->bus_lock, flags);
 	if (is_secure(addr)) {
-		for (i = 0; i < len; i++) {
+        for (i = 0; i < len; i++) {
 			rc = regmap_write(chip->regmap,
 					chip->reg_base + REG_HAP_SEC_ACCESS,
 					0xA5);
@@ -482,6 +645,7 @@ static int qti_haptics_config_vmax(struct qti_hap_chip *chip, int vmax_mv)
 	addr = REG_HAP_VMAX_CFG;
 	mask = HAP_VMAX_MV_MASK;
 	val = (vmax_mv / HAP_VMAX_MV_LSB) << HAP_VMAX_MV_SHIFT;
+	if( val == 0 )	return 0;
 	rc = qti_haptics_masked_write(chip, addr, mask, val);
 	if (rc < 0)
 		dev_err(chip->dev, "write VMAX_CFG failed, rc=%d\n",
@@ -1921,6 +2085,48 @@ cleanup:
 }
 #endif
 
+#ifdef CONFIG_PM8150B_HAPTICS
+#define IMMVIBED_STEP_SIZE	125
+static struct qti_hap_chip *g_chip = NULL;
+static int scale_factor = -1;
+
+int qti_haptic_timed_vmax(int value)
+{
+	struct qti_hap_chip *chip = g_chip;
+
+	if( chip == NULL ) {
+		dev_err(chip->dev, "%s : qti_hap_chip is NULL.\n", __func__);
+		return -1;
+	}
+
+	if( scale_factor == -1 ) {
+		struct qti_hap_config *config = &chip->config;
+		scale_factor = config->vmax_mv / IMMVIBED_STEP_SIZE;
+		dev_err(chip->dev, "%s : scale_factor : %d, \n", __func__, scale_factor);
+		//dev_err(chip->dev, "act_type=%d, lra_shape=%d, lra_auto_res_mode=%d\n", config->act_type, config->lra_shape, config->lra_auto_res_mode);
+
+		// disable auto-resonance mode
+		qti_haptics_lra_auto_res_enable(chip, false);
+	}
+
+	dev_err(chip->dev, "%s : amplitude value : %d, set Vmax %d.\n", __func__, value, value*scale_factor);
+
+	// set Vmax
+	qti_haptics_config_vmax(chip, value*scale_factor);
+
+	if (value == 0) {
+		qti_haptics_play(chip, false);
+		qti_haptics_module_en(chip, false);
+	} else {
+		qti_haptics_module_en(chip, true);
+		qti_haptics_play(chip, true);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(qti_haptic_timed_vmax);
+#endif /* CONFIG_PM8150B_HAPTICS */
+
 static int qti_haptics_probe(struct platform_device *pdev)
 {
 	struct qti_hap_chip *chip;
@@ -2023,6 +2229,14 @@ static int qti_haptics_probe(struct platform_device *pdev)
 	if (rc < 0)
 		dev_dbg(chip->dev, "create debugfs failed, rc=%d\n", rc);
 #endif
+#ifdef CONFIG_PM8150B_HAPTICS
+	g_chip = chip;
+#endif /* CONFIG_PM8150B_HAPTICS */
+#ifdef PM8150B_SYSFS
+    sysfs_create_group(&chip->dev->kobj, &pm8150b_attr_group);
+#endif
+	dev_err(chip->dev, "DONE: Probing qti haptics \n");
+
 	return 0;
 
 destroy_ff:
@@ -2037,6 +2251,12 @@ static int qti_haptics_remove(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(chip->hap_debugfs);
 #endif
+
+#ifdef PM8150B_SYSFS
+    sysfs_remove_group(&chip->dev->kobj, &pm8150b_attr_group);
+    kobject_put(&chip->dev->kobj);
+#endif
+
 	input_ff_destroy(chip->input_dev);
 	dev_set_drvdata(chip->dev, NULL);
 

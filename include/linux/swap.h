@@ -334,7 +334,14 @@ extern unsigned long nr_free_pagecache_pages(void);
 
 
 /* linux/mm/swap.c */
+enum lru_cost_type {
+	COST_CPU,
+	COST_IO,
+};
+extern void lru_note_cost(struct lruvec *lruvec, enum lru_cost_type cost,
+			  bool file, unsigned int nr_pages);
 extern void lru_cache_add(struct page *);
+extern void lru_cache_putback(struct page *page);
 extern void lru_cache_add_anon(struct page *page);
 extern void lru_cache_add_file(struct page *page);
 extern void lru_add_page_tail(struct page *page, struct page *page_tail,
