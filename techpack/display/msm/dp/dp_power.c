@@ -11,6 +11,9 @@
 #include "dp_debug.h"
 
 #define DP_CLIENT_NAME_SIZE	20
+#if defined (CONFIG_LGE_DUAL_SCREEN)
+#include <linux/lge_ds3.h>
+#endif
 
 struct dp_power_private {
 	struct dp_parser *parser;
@@ -371,7 +374,7 @@ static int dp_power_request_gpios(struct dp_power_private *power)
 
 	for (i = 0; i < ARRAY_SIZE(gpio_names); i++) {
 		unsigned int gpio = mp->gpio_config[i].gpio;
-
+		pr_err("[Display_DP] gpio number : %d\n", gpio);
 		if (gpio_is_valid(gpio)) {
 			rc = devm_gpio_request(dev, gpio, gpio_names[i]);
 			if (rc) {
@@ -379,6 +382,7 @@ static int dp_power_request_gpios(struct dp_power_private *power)
 					       gpio_names[i], rc);
 				goto error;
 			}
+			pr_err("[Display DP] %s %d gpio value : %d\n", gpio_names[i], gpio, gpio_get_value(gpio));
 		}
 	}
 	return 0;
@@ -407,8 +411,16 @@ static void dp_power_set_gpio(struct dp_power_private *power, bool flip)
 		if (dp_power_find_gpio(config->gpio_name, "aux-sel"))
 			config->value = flip;
 
+#if defined (CONFIG_LGE_DUAL_SCREEN)
+		if (is_ds_connected()) {
+			pr_info("ds3 connected. invert flip\n");
+			config->value = !flip;
+		}
+#endif
+
+
 		if (gpio_is_valid(config->gpio)) {
-			DP_DEBUG("gpio %s, value %d\n", config->gpio_name,
+			DP_ERR("gpio %s, value %d\n", config->gpio_name,
 				config->value);
 
 			if (dp_power_find_gpio(config->gpio_name, "aux-en") ||
@@ -445,14 +457,34 @@ static int dp_power_config_gpios(struct dp_power_private *power, bool flip,
 
 		dp_power_set_gpio(power, flip);
 	} else {
+#if defined (CONFIG_LGE_DUAL_SCREEN)
+		config = mp->gpio_config;
+		for (i = 0; i < mp->num_gpio; i++) {
+			if (gpio_is_valid(config->gpio)) {
+				if (dp_power_find_gpio(config->gpio_name, "aux-en")) {
+					gpio_set_value(config->gpio, 1);
+					gpio_free(config->gpio);
+				} else if (dp_power_find_gpio(config->gpio_name, "aux-sel")) {
+					gpio_set_value(config->gpio, 0);
+					gpio_free(config->gpio);
+				} else {
+					gpio_set_value(config->gpio, 0);
+					gpio_free(config->gpio);
+				}
+				pr_info("gpio %s -> %d, flip %d\n ", config->gpio_name,
+						gpio_get_value(config->gpio), flip ? 1 : 0);
+			}
+			config++;
+		}
+#else
 		for (i = 0; i < mp->num_gpio; i++) {
 			if (gpio_is_valid(config[i].gpio)) {
 				gpio_set_value(config[i].gpio, 0);
 				gpio_free(config[i].gpio);
 			}
 		}
+#endif
 	}
-
 	return 0;
 }
 
