@@ -13,6 +13,10 @@
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
 
+#ifdef CONFIG_MACH_KONA_TIMELM
+#include <soc/qcom/lge/board_lge.h>
+#endif
+
 static void cam_sensor_update_req_mgr(
 	struct cam_sensor_ctrl_t *s_ctrl,
 	struct cam_packet *csl_packet)
@@ -772,6 +776,13 @@ int cam_sensor_match_id(struct cam_sensor_ctrl_t *s_ctrl)
 	CAM_DBG(CAM_SENSOR, "read id: 0x%x expected id 0x%x:",
 		chipid, slave_info->sensor_id);
 
+#ifdef CONFIG_MACH_KONA_TIMELM
+	if (!lge_get_qemmode_boot() && slave_info->sensor_id == 0x6d) {
+		if(chipid != 0x6d)
+			CAM_ERR(CAM_SENSOR, "failed to read sensor id!. read id: 0x%x", chipid);
+		return 0;
+	}
+#endif
 	if (cam_sensor_id_by_mask(s_ctrl, chipid) != slave_info->sensor_id) {
 		CAM_WARN(CAM_SENSOR, "read id: 0x%x expected id 0x%x:",
 				chipid, slave_info->sensor_id);
@@ -1272,6 +1283,11 @@ int cam_sensor_power_up(struct cam_sensor_ctrl_t *s_ctrl)
 	struct cam_camera_slave_info *slave_info;
 	struct cam_hw_soc_info *soc_info;
 
+#ifdef CONFIG_MACH_LGE
+    struct v4l2_subdev *cci_subdev = cam_cci_get_subdev(CCI_DEVICE_0);
+    struct cci_device *cci_dev = v4l2_get_subdevdata(cci_subdev);
+#endif
+
 	if (!s_ctrl) {
 		CAM_ERR(CAM_SENSOR, "failed: %pK", s_ctrl);
 		return -EINVAL;
@@ -1306,6 +1322,15 @@ int cam_sensor_power_up(struct cam_sensor_ctrl_t *s_ctrl)
 	rc = camera_io_init(&(s_ctrl->io_master_info));
 	if (rc < 0)
 		CAM_ERR(CAM_SENSOR, "cci_init failed: rc: %d", rc);
+#ifdef CONFIG_MACH_LGE
+	complete(&cci_dev->sensor_complete);
+#endif
+
+#ifdef CONFIG_MACH_LGE
+	CAM_ERR(CAM_SENSOR, "slave_addr:0x%x,sensor_id:0x%x",
+		s_ctrl->sensordata->slave_info.sensor_slave_addr,
+		s_ctrl->sensordata->slave_info.sensor_id);
+#endif
 
 	return rc;
 }
@@ -1315,6 +1340,10 @@ int cam_sensor_power_down(struct cam_sensor_ctrl_t *s_ctrl)
 	struct cam_sensor_power_ctrl_t *power_info;
 	struct cam_hw_soc_info *soc_info;
 	int rc = 0;
+#ifdef CONFIG_MACH_LGE
+    struct v4l2_subdev *cci_subdev = cam_cci_get_subdev(CCI_DEVICE_0);
+    struct cci_device *cci_dev = v4l2_get_subdevdata(cci_subdev);
+#endif
 
 	if (!s_ctrl) {
 		CAM_ERR(CAM_SENSOR, "failed: s_ctrl %pK", s_ctrl);
@@ -1345,6 +1374,15 @@ int cam_sensor_power_down(struct cam_sensor_ctrl_t *s_ctrl)
 	}
 
 	camera_io_release(&(s_ctrl->io_master_info));
+#ifdef CONFIG_MACH_LGE
+	reinit_completion(&cci_dev->sensor_complete);
+#endif
+
+#ifdef CONFIG_MACH_LGE
+	CAM_ERR(CAM_SENSOR, "slave_addr:0x%x,sensor_id:0x%x",
+		s_ctrl->sensordata->slave_info.sensor_slave_addr,
+		s_ctrl->sensordata->slave_info.sensor_id);
+#endif
 
 	return rc;
 }
