@@ -7352,7 +7352,11 @@ int voc_start_voice_call(uint32_t session_id)
 		if (ret < 0) {
 			pr_debug("%s: voice_mhi_start failed! %d\n",
 				 __func__, ret);
+#ifndef CONFIG_MACH_KONA_TIMELM_LAO_LDU
 			goto fail;
+#else
+			pr_info("%s skip goto fail only LDU",__func__);
+#endif
 		}
 
 		ret = voice_create_mvm_cvs_session(v);

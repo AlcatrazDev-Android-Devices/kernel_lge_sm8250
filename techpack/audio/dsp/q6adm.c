@@ -22,6 +22,15 @@
 #include <ipc/apr.h>
 #include "adsp_err.h"
 
+#if defined(CONFIG_SND_LGE_CROSSTALK)
+#include "lge_dsp_crosstalk.h"
+#endif
+#if defined(CONFIG_SND_LGE_TX_NXP_LIB)
+#include "lge_dsp_nxp_lib.h"
+#endif
+#if defined(CONFIG_SND_LGE_CH_SWAPPER)
+#include "lge_dsp_ch_swapper.h"
+#endif
 #define TIMEOUT_MS 1000
 
 #define RESET_COPP_ID 99
@@ -3042,6 +3051,12 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		 __func__, port_id, path, rate, channel_mode, perf_mode,
 		 topology);
 
+#if defined(CONFIG_SND_SOC_TFA9878)
+	if(port_id == AFE_PORT_ID_PRIMARY_MI2S_RX ) {
+		bit_width = 24;
+	}
+#endif
+
 	port_id = q6audio_convert_virtual_to_portid(port_id);
 	port_idx = adm_validate_and_get_port_index(port_id);
 	if (port_idx < 0) {
@@ -5489,6 +5504,299 @@ done:
 	return ret;
 }
 EXPORT_SYMBOL(adm_get_doa_tracking_mon);
+
+#if defined(CONFIG_SND_LGE_TX_NXP_LIB)
+int q6adm_set_tx_cfg_parms(int port_id, int param_id, struct tx_control_param_t *tx_control_param)
+{
+    int rc;
+    int port_idx, copp_idx;
+	struct param_hdr_v3 param_hdr;
+
+    port_id = afe_convert_virtual_to_portid(port_id);
+    port_idx = adm_validate_and_get_port_index(port_id);
+    copp_idx = adm_get_default_copp_idx(port_id);
+
+    pr_info("%s : port_id %x, copp_idx %d, port_idx %d\n", __func__, port_id, copp_idx, port_idx);
+
+    if (port_idx < 0) {
+        pr_err("%s : Invalid port_id 0x%x\n", __func__, port_id);
+        return -EINVAL;
+    }
+
+    if (copp_idx < 0 || copp_idx >= MAX_COPPS_PER_PORT) {
+        pr_err("%s: Invalid copp_num: %d\n", __func__, copp_idx);
+        return -EINVAL;
+    }
+
+    memset(&param_hdr, 0, sizeof(param_hdr));
+
+    param_hdr.instance_id = 0x8000;
+    param_hdr.module_id = AUDIO_MODULE_AC;
+    param_hdr.param_id = param_id;
+    param_hdr.param_size = sizeof(struct tx_control_param_t);
+    param_hdr.reserved = 0;
+    pr_info("%s : param_size %d %x\n", __func__, param_hdr.param_size, param_hdr.param_size);
+
+    rc = adm_pack_and_set_one_pp_param(port_id, copp_idx, param_hdr, (uint8_t *) tx_control_param);
+
+    if (rc)
+    {
+        pr_err("%s: Failed to set media format configuration data, err %d\n",
+               __func__, rc);
+        goto fail_cmd;
+    }
+    return 0;
+
+fail_cmd :
+    return rc;
+}
+EXPORT_SYMBOL(q6adm_set_tx_cfg_parms);
+
+int q6adm_set_tx_voice_focus_parms(int port_id, int param_id, struct tx_ac_voicefocus_param_t *tx_control_param)
+{
+    int rc;
+    int port_idx, copp_idx;
+	struct param_hdr_v3            param_hdr;
+
+    port_id = afe_convert_virtual_to_portid(port_id);
+    port_idx = adm_validate_and_get_port_index(port_id);
+    copp_idx = adm_get_default_copp_idx(port_id);
+
+    pr_info("%s : port_id %x, copp_idx %d, port_idx %d\n", __func__, port_id, copp_idx, port_idx);
+
+    if (port_idx < 0) {
+        pr_err("%s : Invalid port_id 0x%x\n", __func__, port_id);
+        return -EINVAL;
+    }
+
+    if (copp_idx < 0 || copp_idx >= MAX_COPPS_PER_PORT) {
+        pr_err("%s: Invalid copp_num: %d\n", __func__, copp_idx);
+        return -EINVAL;
+    }
+
+    memset(&param_hdr, 0, sizeof(param_hdr));
+
+    param_hdr.instance_id = 0x8000;
+    param_hdr.module_id = AUDIO_MODULE_AC;
+    param_hdr.param_id = param_id;
+    param_hdr.param_size = sizeof(struct tx_ac_voicefocus_param_t);
+    param_hdr.reserved = 0;
+
+    pr_info("%s : param_size %d\n", __func__, param_hdr.param_size);
+
+    rc = adm_pack_and_set_one_pp_param(port_id, copp_idx, param_hdr, (uint8_t *) tx_control_param);
+
+    if (rc)
+    {
+        pr_err("%s: Failed to set media format configuration data, err %d\n",
+               __func__, rc);
+        goto fail_cmd;
+    }
+    return 0;
+
+fail_cmd :
+    return rc;
+}
+EXPORT_SYMBOL(q6adm_set_tx_voice_focus_parms);
+
+int q6adm_set_tx_device_info_parms(int port_id, int param_id, struct tx_ac_deviceinfo_param_t *tx_control_param)
+{
+    int rc;
+    int port_idx, copp_idx;
+	struct param_hdr_v3            param_hdr;
+
+    port_id = afe_convert_virtual_to_portid(port_id);
+    port_idx = adm_validate_and_get_port_index(port_id);
+    copp_idx = adm_get_default_copp_idx(port_id);
+
+    pr_info("%s : port_id %x, copp_idx %d, port_idx %d\n", __func__, port_id, copp_idx, port_idx);
+
+    if (port_idx < 0) {
+        pr_err("%s : Invalid port_id 0x%x\n", __func__, port_id);
+        return -EINVAL;
+    }
+
+    if (copp_idx < 0 || copp_idx >= MAX_COPPS_PER_PORT) {
+        pr_err("%s: Invalid copp_num: %d\n", __func__, copp_idx);
+        return -EINVAL;
+    }
+
+    memset(&param_hdr, 0, sizeof(param_hdr));
+
+    param_hdr.instance_id = 0x8000;
+    param_hdr.module_id = AUDIO_MODULE_AC;
+    param_hdr.param_id = param_id;
+    param_hdr.param_size = sizeof(struct tx_ac_deviceinfo_param_t);
+    param_hdr.reserved = 0;
+
+    pr_info("%s : param_size %d\n", __func__, param_hdr.param_size);
+
+    rc = adm_pack_and_set_one_pp_param(port_id, copp_idx, param_hdr, (uint8_t *) tx_control_param);
+
+    if (rc)
+    {
+        pr_err("%s: Failed to set media format configuration data, err %d\n",
+               __func__, rc);
+        goto fail_cmd;
+    }
+    return 0;
+
+fail_cmd :
+    return rc;
+}
+EXPORT_SYMBOL(q6adm_set_tx_device_info_parms);
+
+int q6adm_set_tx_mix_parms(int port_id, int param_id, struct lgemixer_mixinglevel_t *tx_control_param)
+{
+    int rc;
+    int port_idx, copp_idx;
+	struct param_hdr_v3            param_hdr;
+
+    port_id = afe_convert_virtual_to_portid(port_id);
+    port_idx = adm_validate_and_get_port_index(port_id);
+    copp_idx = adm_get_default_copp_idx(port_id);
+
+    pr_info("%s : port_id %x, copp_idx %d, port_idx %d\n", __func__, port_id, copp_idx, port_idx);
+
+    if (port_idx < 0) {
+        pr_err("%s : Invalid port_id 0x%x\n", __func__, port_id);
+        return -EINVAL;
+    }
+
+    if (copp_idx < 0 || copp_idx >= MAX_COPPS_PER_PORT) {
+        pr_err("%s: Invalid copp_num: %d\n", __func__, copp_idx);
+        return -EINVAL;
+    }
+
+    memset(&param_hdr, 0, sizeof(param_hdr));
+
+    param_hdr.instance_id = 0x8000;
+    param_hdr.module_id = CAPI_V2_MODULE_ID_LGE_MIXER;
+    param_hdr.param_id = param_id;
+    param_hdr.param_size = sizeof(struct lgemixer_mixinglevel_t);
+    param_hdr.reserved = 0;
+
+    pr_info("%s : param_size %d\n", __func__, param_hdr.param_size);
+
+    rc = adm_pack_and_set_one_pp_param(port_id, copp_idx, param_hdr, (uint8_t *) tx_control_param);
+
+    if (rc)
+    {
+        pr_err("%s: Failed to set media format configuration data, err %d\n",
+               __func__, rc);
+        goto fail_cmd;
+    }
+    return 0;
+
+fail_cmd :
+    return rc;
+}
+EXPORT_SYMBOL(q6adm_set_tx_mix_parms);
+
+
+#endif
+
+#if defined(CONFIG_SND_LGE_CH_SWAPPER)
+int q6adm_set_ch_swapper_parms(int port_id, int param_id, int param_data)
+{
+    int rc;
+    int port_idx, copp_idx;
+    struct param_hdr_v3            param_hdr;
+
+    port_id = afe_convert_virtual_to_portid(port_id);
+    port_idx = adm_validate_and_get_port_index(port_id);
+    copp_idx = adm_get_default_copp_idx(port_id);
+
+    pr_info("%s : port_id %x, copp_idx %d, port_idx %d\n", __func__, port_id, copp_idx, port_idx);
+
+    if (port_idx < 0) {
+        pr_err("%s : Invalid port_id 0x%x\n", __func__, port_id);
+        return -EINVAL;
+    }
+
+    if (copp_idx < 0 || copp_idx >= MAX_COPPS_PER_PORT) {
+        pr_err("%s: Invalid copp_num: %d\n", __func__, copp_idx);
+        return -EINVAL;
+    }
+
+    memset(&param_hdr, 0, sizeof(param_hdr));
+
+    param_hdr.instance_id = 0x8000;
+    param_hdr.module_id = LGE_CH_SWAPPER_PARAM_ID_ENABLE;
+    param_hdr.param_id = param_id;
+    param_hdr.param_size = sizeof(int);
+    param_hdr.reserved = 0;
+
+    pr_info("%s : param_size %d param %d\n", __func__, param_hdr.param_size, param_data);
+
+    rc = adm_pack_and_set_one_pp_param(port_id, copp_idx, param_hdr, (uint8_t*)&param_data);
+
+    if (rc)
+    {
+        pr_err("%s: Failed to set media format configuration data, err %d\n",
+               __func__, rc);
+        goto fail_cmd;
+    }
+    return 0;
+
+fail_cmd :
+    return rc;
+}
+EXPORT_SYMBOL(q6adm_set_ch_swapper_parms);
+#endif
+
+#if defined (CONFIG_SND_LGE_CROSSTALK)
+int q6adm_set_crosstalk_parms(int port_id, int copp_idx, int mode)
+{
+	struct adm_crosstalk_param crosstalk_cfg;
+	struct param_hdr_v3 param_hdr;
+	int port_idx;
+	int ret  = 0;
+
+	pr_debug("%s: Enter, port_id %d, copp_idx %d\n",
+		  __func__, port_id, copp_idx);
+	port_id = q6audio_convert_virtual_to_portid(port_id);
+	port_idx = adm_validate_and_get_port_index(port_id);
+	if (port_idx < 0 || port_idx >= AFE_MAX_PORTS) {
+		pr_err("%s: Invalid port_id %#x\n", __func__, port_id);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	if (copp_idx < 0 || copp_idx >= MAX_COPPS_PER_PORT) {
+		pr_err("%s: Invalid copp_num: %d\n", __func__, copp_idx);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	memset(&crosstalk_cfg, 0, sizeof(crosstalk_cfg));
+	memset(&param_hdr, 0, sizeof(param_hdr));
+
+	param_hdr.instance_id = INSTANCE_ID_0;
+	param_hdr.module_id = LGE_CROSSTALK_ANC;
+	param_hdr.param_id = LGE_CROSSTALK_ANC_HEADSET_MODE;
+	param_hdr.param_size = sizeof(crosstalk_cfg);
+	param_hdr.reserved = 0;
+
+	crosstalk_cfg.crosstalk_enable_mode = mode;
+
+	ret = adm_pack_and_set_one_pp_param(port_id, copp_idx, param_hdr,
+					(uint8_t *) &crosstalk_cfg);
+
+	if (ret) {
+		pr_err("%s: Failed to set crosstalk params, err %d\n", __func__, ret);
+		goto done;
+	}
+
+	pr_debug("%s: crosstalk_cfg Set params returned success", __func__);
+	ret = 0;
+
+done:
+	return ret;
+}
+EXPORT_SYMBOL(q6adm_set_crosstalk_parms);
+
+#endif
 
 int __init adm_init(void)
 {
