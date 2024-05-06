@@ -28,7 +28,7 @@
 #include "cam_debug_util.h"
 #include "cam_common_util.h"
 
-#define CAM_REQ_MGR_EVENT_MAX 100
+#define CAM_REQ_MGR_EVENT_MAX 150 //30 /* LGE_CHANGE, fix "SendShutterNotification() nonincrementing shutter request id" issue 2019-12-27 */
 
 static struct cam_req_mgr_device g_dev;
 struct kmem_cache *g_cam_req_mgr_timer_cachep;

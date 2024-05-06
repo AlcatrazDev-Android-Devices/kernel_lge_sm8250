@@ -63,6 +63,12 @@ int cam_sync_init_group_object(struct sync_table_row *table,
 	struct sync_parent_info *parent_info;
 	struct sync_table_row *row = table + idx;
 	struct sync_table_row *child_row = NULL;
+//LGE_CHANGE, CST
+	for (i = 0; i < num_objs; i++) {
+		if(sync_objs[i] == idx){
+			return -EINVAL;
+		}
+	}
 
 	cam_sync_init_row(table, idx, "merged_fence", CAM_SYNC_TYPE_GROUP);
 
