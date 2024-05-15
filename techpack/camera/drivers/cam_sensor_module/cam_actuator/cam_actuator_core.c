@@ -1149,7 +1149,7 @@ int32_t act_i2c_write(struct cam_actuator_ctrl_t *a_ctrl, uint32_t RamAddr, uint
 
 	ret = camera_io_dev_write(
 		&(a_ctrl->io_master_info),
-		&i2c_reg_setting);
+		&i2c_reg_setting, false);
 	kfree(i2c_reg_setting.reg_setting);
 	return ret;
 }
