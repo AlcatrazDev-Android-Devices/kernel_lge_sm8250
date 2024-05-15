@@ -111,10 +111,11 @@
 		clock-names = "wsa_core_clk", "wsa_npl_clk";
 		clocks = <&clock_audio_wsa_1 0>,
 			 <&clock_audio_wsa_2 0>;
-		qcom,wsa-swr-gpios = <&wsa_swr_gpios>;
+		qcom,is-used-swr-gpio = <0>;
 		qcom,wsa-bcl-pmic-params = /bits/ 8 <0x00 0x04 0x3E>;
 		qcom,default-clk-id = <TX_CORE_CLK>;
 		swr0: wsa_swr_master {
+			status = "disabled";
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
 			#size-cells = <0>;
@@ -136,31 +137,31 @@
 				<8 SPKR_R_VI 0x3>;
 			qcom,swr-num-dev = <2>;
 			wsa881x_0211: wsa881x@20170211 {
-				compatible = "qcom,wsa881x";
-				reg = <0x10 0x20170211>;
-				qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
-				qcom,bolero-handle = <&bolero>;
+					compatible = "qcom,wsa881x";
+					reg = <0x10 0x20170211>;
+					qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
+					qcom,bolero-handle = <&bolero>;
 			};
-
+			
 			wsa881x_0212: wsa881x@20170212 {
-				compatible = "qcom,wsa881x";
-				reg = <0x10 0x20170212>;
-				qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
-				qcom,bolero-handle = <&bolero>;
+					compatible = "qcom,wsa881x";
+					reg = <0x10 0x20170212>;
+					qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
+					qcom,bolero-handle = <&bolero>;
 			};
-
+			
 			wsa881x_0213: wsa881x@21170213 {
-				compatible = "qcom,wsa881x";
-				reg = <0x10 0x21170213>;
-				qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
-				qcom,bolero-handle = <&bolero>;
+					compatible = "qcom,wsa881x";
+					reg = <0x10 0x21170213>;
+					qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
+					qcom,bolero-handle = <&bolero>;
 			};
-
+			
 			wsa881x_0214: wsa881x@21170214 {
-				compatible = "qcom,wsa881x";
-				reg = <0x10 0x21170214>;
-				qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
-				qcom,bolero-handle = <&bolero>;
+					compatible = "qcom,wsa881x";
+					reg = <0x10 0x21170214>;
+					qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
+					qcom,bolero-handle = <&bolero>;
 			};
 		};
 
@@ -199,7 +200,7 @@
 		qcom,cdc-vdd-buck-current = <650000>;
 
 		cdc-vdd-mic-bias-supply = <&BOB>;
-		qcom,cdc-vdd-mic-bias-voltage = <3296000 3296000>;
+		qcom,cdc-vdd-mic-bias-voltage = <3296000 3960000>;
 		qcom,cdc-vdd-mic-bias-current = <30000>;
 
 		qcom,cdc-micbias1-mv = <1800>;
@@ -308,17 +309,17 @@
 		"VA SWR_MIC7", "DMIC8_OUTPUT";
 	qcom,msm-mbhc-hphl-swh = <1>;
 	qcom,msm-mbhc-gnd-swh = <1>;
-	qcom,cdc-dmic01-gpios = <&cdc_dmic01_gpios>;
-	qcom,cdc-dmic23-gpios = <&cdc_dmic23_gpios>;
-	qcom,cdc-dmic45-gpios = <&cdc_dmic45_gpios>;
+//	qcom,cdc-dmic01-gpios = <&cdc_dmic01_gpios>;
+//	qcom,cdc-dmic23-gpios = <&cdc_dmic23_gpios>;
+//	qcom,cdc-dmic45-gpios = <&cdc_dmic45_gpios>;
 	asoc-codec  = <&stub_codec>, <&bolero>, <&ext_disp_audio_codec>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 			   "msm-ext-disp-audio-codec-rx";
-	qcom,wsa-max-devs = <2>;
-	qcom,wsa-devs = <&wsa881x_0211>, <&wsa881x_0212>,
-			<&wsa881x_0213>, <&wsa881x_0214>;
-	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
-				  "SpkrLeft", "SpkrRight";
+	qcom,wsa-max-devs = <0>;
+//	qcom,wsa-devs = <&wsa881x_0211>, <&wsa881x_0212>,
+//			<&wsa881x_0213>, <&wsa881x_0214>;
+//	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
+//				  "SpkrLeft", "SpkrRight";
 	qcom,codec-max-aux-devs = <1>;
 	qcom,codec-aux-devs = <&wcd938x_codec>;
 	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
@@ -326,6 +327,16 @@
 };
 
 &q6core {
+	cdc_sen_mi2s_gpios: cdc_sen_pinctrl {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&lpi_i2s2_sck_active &lpi_i2s2_ws_active
+			     &lpi_i2s2_sd0_active >;
+		pinctrl-1 = <&lpi_i2s2_sck_sleep &lpi_i2s2_ws_sleep
+			     &lpi_i2s2_sd0_sleep >;
+		qcom,lpi-gpios;
+	};
+	/*	
 	cdc_dmic01_gpios: cdc_dmic01_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
@@ -358,6 +369,7 @@
 		pinctrl-1 = <&wsa_swr_clk_sleep &wsa_swr_data_sleep>;
 		qcom,lpi-gpios;
 	};
+	*/
 
 	rx_swr_gpios: rx_swr_clk_data_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
