@@ -1,4 +1,5 @@
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+ifneq ($(CONFIG_MACH_LGE), y)
         dtbo-$(CONFIG_ARCH_KONA) += \
                 kona-cdp-overlay.dtbo \
                 kona-cdp-lcd-overlay.dtbo \
@@ -29,7 +30,14 @@ kona-xrfusion-ult-overlay.dtbo-base := kona.dtb kona-v2.dtb kona-v2.1.dtb
 kona-arglass-overlay.dtbo-base := kona.dtb kona-v2.dtb kona-v2.1.dtb
 kona-xrsku4-overlay.dtbo-base := kona.dtb kona-v2.dtb kona-v2.1.dtb
 kona-hdk-overlay.dtbo-base := kona.dtb kona-v2.dtb kona-v2.1.dtb
+else #CONFIG_MACH_LGE
+	dtb-$(CONFIG_ARCH_KONA) += \
+		kona.dtb \
+		kona-v2.dtb \
+		kona-v2.1.dtb
+endif
 else
+ifneq ($(CONFIG_MACH_LGE), y)
 dtb-$(CONFIG_ARCH_KONA) += kona-rumi.dtb \
         kona-mtp.dtb \
         kona-mtp-ws.dtb \
@@ -71,7 +79,12 @@ dtb-$(CONFIG_ARCH_KONA) += kona-rumi.dtb \
         kona-v2.1-iot-rb5.dtb \
         kona-7230-iot-rb5.dtb \
         kona-7230m-iot-rb5.dtb
-
+else #CONFIG_MACH_LGE
+	dtb-$(CONFIG_ARCH_KONA) += \
+		kona.dtb \
+		kona-v2.dtb \
+		kona-v2.1.dtb
+endif
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
@@ -286,17 +299,7 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		khajeq-idp-nopmi-overlay.dtbo \
 		khajeq-idp-usbc-overlay.dtbo \
 		khajeq-idp-pm8010-overlay.dtbo \
-		khajeq-idps-display-90hz-overlay.dtbo \
-		khajeg-atp-overlay.dtbo \
-		khajeg-qrd-overlay.dtbo \
-		khajeg-qrd-hvdcp3p5-overlay.dtbo \
-		khajeg-qrd-nowcd9375-overlay.dtbo \
-		khajeg-qrd-nopmi-overlay.dtbo \
-		khajeg-idp-overlay.dtbo \
-		khajeg-idp-nopmi-overlay.dtbo \
-		khajeg-idp-usbc-overlay.dtbo \
-		khajeg-idp-pm8010-overlay.dtbo \
-		khajeg-idps-display-90hz-overlay.dtbo
+		khajeq-idps-display-90hz-overlay.dtbo
 
 khaje-atp-overlay.dtbo-base := khaje.dtb
 khaje-idp-overlay.dtbo-base := khaje.dtb
@@ -328,16 +331,6 @@ khajeq-idp-overlay.dtbo-base := khajeq.dtb
 khajeq-idp-nopmi-overlay.dtbo-base := khajeq.dtb
 khajeq-idp-pm8010-overlay.dtbo-base := khajeq.dtb
 khajeq-idp-usbc-overlay.dtbo-base := khajeq.dtb
-khajeg-atp-overlay.dtbo-base := khajeg.dtb
-khajeg-qrd-overlay.dtbo-base := khajeg.dtb
-khajeg-qrd-hvdcp3p5-overlay.dtbo-base := khajeg.dtb
-khajeg-qrd-nowcd9375-overlay.dtbo-base := khajeg.dtb
-khajeg-qrd-nopmi-overlay.dtbo-base := khajeg.dtb
-khajeg-idp-overlay.dtbo-base := khajeg.dtb
-khajeg-idp-nopmi-overlay.dtbo-base := khajeg.dtb
-khajeg-idp-pm8010-overlay.dtbo-base := khajeg.dtb
-khajeg-idp-usbc-overlay.dtbo-base := khajeg.dtb
-khajeg-idps-display-90hz-overlay.dtbo-base := khajeg.dtb
 else
 dtb-$(CONFIG_ARCH_KHAJE) += khaje-idp.dtb \
 		khaje-qrd.dtb \
@@ -366,17 +359,7 @@ dtb-$(CONFIG_ARCH_KHAJE) += khaje-idp.dtb \
 		khajeq-qrd.dtb \
 		khajeq-qrd-nowcd9375.dtb \
 		khajeq-qrd-hvdcp3p5.dtb \
-		khajeq-qrd-nopmi.dtb \
-		khajeg-atp.dtb \
-		khajeg-qrd.dtb \
-		khajeg-qrd-nowcd9375.dtb \
-		khajeg-qrd-hvdcp3p5.dtb \
-		khajeg-qrd-nopmi.dtb \
-		khajeg-idp.dtb \
-		khajeg-idp-nopmi.dtb \
-		khajeg-idp-usbc.dtb \
-		khajeg-idp-pm8010.dtb \
-		khajeg-idps-display-90hz.dtb
+		khajeq-qrd-nopmi.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
