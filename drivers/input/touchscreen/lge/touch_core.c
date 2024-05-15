@@ -1352,7 +1352,9 @@ static int touch_core_probe_normal(struct platform_device *pdev)
 	}
 
 	touch_disable_irq(ts->irq);
+#if defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_DRM_MSM) && defined(CONFIG_FB)
 	touch_init_pm(ts);
+#endif
 
 	touch_init_notify(ts);
 
@@ -1406,7 +1408,9 @@ static int touch_core_probe_etc(struct platform_device *pdev)
 		return ret;
 	}
 
+#if defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_DRM_MSM) && defined(CONFIG_FB)
 	touch_init_pm(ts);
+#endif
 	touch_init_notify(ts);
 
 	return ret;

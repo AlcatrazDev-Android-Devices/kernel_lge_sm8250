@@ -11,7 +11,7 @@
 #include <sound/jack.h>
 #ifdef CONFIG_MACH_LGE
 #include <linux/extcon.h>
-#include "../../../../../../kernel/msm-4.19/drivers/extcon/extcon.h"
+#include "../../../../drivers/extcon/extcon.h"
 #endif
 
 #define TOMBAK_MBHC_NC	0

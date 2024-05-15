@@ -1054,7 +1054,7 @@ EXPORT_SYMBOL(mhi_async_power_up);
 char ptr_sfr[SYS_M_SFR_LENGTH] = "no SFR";
 u32 sfr_len;
 
-void mhi_print_sfr()
+void mhi_print_sfr(void)
 {
 	if (sfr_len > 0 && sfr_len < SYS_M_SFR_LENGTH)
 	{
