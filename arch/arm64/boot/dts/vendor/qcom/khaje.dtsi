@@ -21,7 +21,7 @@
 / {
 	model = "Qualcomm Technologies, Inc. Khaje SoC";
 	compatible = "qcom,khaje";
-	qcom,msm-id = <518 0x10000>, <586 0x10000>;
+	qcom,msm-id = <518 0x10000>;
 	interrupt-parent = <&wakegic>;
 
 	#address-cells = <2>;
@@ -408,6 +408,11 @@
 		cont_splash_memory: cont_splash_region@5c000000 {
 			reg = <0x0 0x5c000000 0x0 0x00f00000>;
 			label = "cont_splash_region";
+		};
+
+		disp_rdump_memory: disp_rdump_region@5c000000 {
+			reg = <0x0 0x5c000000 0x0 0x00f00000>;
+			label = "disp_rdump_region";
 		};
 
 		dfps_data_memory: dfps_data_region@5cf00000 {
@@ -1952,7 +1957,6 @@
 	qcom,chd_silver {
 		compatible = "qcom,core-hang-detect";
 		label = "silver";
-		cluster-id = <0>;
 		qcom,threshold-arr = <0x0f1880b0 0x0f1980b0
 				      0x0f1a80b0 0x0f1b80b0>;
 		qcom,config-arr = <0x0f1880b8 0x0f1980b8
@@ -1962,7 +1966,6 @@
 	qcom,chd_gold {
 		compatible = "qcom,core-hang-detect";
 		label = "gold";
-		cluster-id = <1>;
 		qcom,threshold-arr = <0x0f0880b0 0x0f0980b0
 				      0x0f0a80b0 0x0f0b80b0>;
 		qcom,config-arr = <0x0f0880b8 0x0f0980b8

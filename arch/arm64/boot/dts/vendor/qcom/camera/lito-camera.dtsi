@@ -992,7 +992,7 @@
 		clock-cntl-level = "lowsvs", "svs", "svs_l1", "nominal";
 		clock-rates =
 			<380000000 0 0>,
-			<384000000 0 0>,
+			<400000000 0 0>, /* LGE_CHANGE, Fix FD HW error CASE#04751123 2020-08-06 sungmin.cho@lge.com <384000000 0 0> */
 			<480000000 0 0>,
 			<600000000 0 0>;
 		status = "ok";
