@@ -6,3 +6,6 @@ config MSM_TZ_LOG
           This option enables a driver with a debugfs interface for messages
           produced by the Secure code (Trust zone). These messages provide
           diagnostic information about TZ operation.
+
+config LGE_SUPPRESS_QSEE_LOG
+        bool "Suppress QSEECOM log from kernel log"

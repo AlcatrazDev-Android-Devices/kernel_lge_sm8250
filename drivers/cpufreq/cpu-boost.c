@@ -190,6 +190,7 @@ static ssize_t show_input_boost_freq(struct kobject *kobj,
 
 cpu_boost_attr_rw(input_boost_freq);
 
+#ifdef CONFIG_SCHED_MULTI_STEP_BOOST
 static DEFINE_PER_CPU(unsigned int, sub_boost_freq);
 
 #define MIN_INPUT_INTERVAL_MS 40
@@ -267,6 +268,7 @@ static ssize_t show_sub_boost_freq(struct kobject *kobj,
 }
 
 cpu_boost_attr_rw(sub_boost_freq);
+#endif /* CONFIG_SCHED_MULTI_STEP_BOOST */
 
 /*
  * The CPUFREQ_ADJUST notifier is used to override the current policy min to
@@ -351,7 +353,9 @@ static void do_input_boost_rem(struct work_struct *work)
 		sched_boost_active = false;
 	}
 
+#ifdef CONFIG_SCHED_MULTI_STEP_BOOST
 	boost_step = 0;
+#endif /* CONFIG_SCHED_MULTI_STEP_BOOST */
 
 #ifdef CONFIG_SCHED_CAS
 	queue_delayed_work(cpu_boost_wq, &input_schedtune_boost,
@@ -394,6 +398,7 @@ static void do_input_boost(struct work_struct *work)
 					msecs_to_jiffies(input_boost_ms));
 }
 
+#ifdef CONFIG_SCHED_MULTI_STEP_BOOST
 static void do_input_boost_multi_step(struct work_struct *work)
 {
 	unsigned int i, ret;
@@ -466,6 +471,7 @@ static void do_input_boost_multi_step(struct work_struct *work)
 	queue_delayed_work(cpu_boost_wq, &input_boost_rem,
 					msecs_to_jiffies(input_boost_ms));
 }
+#endif /* CONFIG_SCHED_MULTI_STEP_BOOST */
 
 static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
@@ -475,6 +481,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 	if (!input_boost_enabled)
 		return;
 
+#ifdef CONFIG_SCHED_MULTI_STEP_BOOST
 	{ // multi-step boost
 		now = ktime_to_us(ktime_get());
 		if (now - last_input_time < MIN_INPUT_INTERVAL_US)
@@ -487,6 +494,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 		last_input_time = ktime_to_us(ktime_get());
 		return;
 	}
+#endif /* CONFIG_SCHED_MULTI_STEP_BOOST */
 
 	now = ktime_to_us(ktime_get());
 	if (now - last_input_time < MIN_INPUT_INTERVAL)
@@ -582,7 +590,10 @@ static int cpu_boost_init(void)
 
 	INIT_WORK(&input_boost_work, do_input_boost);
 	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
+
+#ifdef CONFIG_SCHED_MULTI_STEP_BOOST
 	INIT_WORK(&input_boost_multi_step_work, do_input_boost_multi_step);
+#endif /* CONFIG_SCHED_MULTI_STEP_BOOST */
 
 #ifdef CONFIG_SCHED_CAS
 	INIT_DELAYED_WORK(&input_schedtune_boost, do_input_schedtune_boost);
@@ -612,9 +623,11 @@ static int cpu_boost_init(void)
 	if (ret)
 		pr_err("Failed to create sched_boost_on_input node: %d\n", ret);
 
+#ifdef CONFIG_SCHED_MULTI_STEP_BOOST
     ret = sysfs_create_file(cpu_boost_kobj, &sub_boost_freq_attr.attr);
     if (ret)
         pr_err("Failed to create sub_boost_freq node: %d\n", ret);
+#endif /* CONFIG_SCHED_MULTI_STEP_BOOST */
 
 #ifdef CONFIG_SCHED_CAS
     ret = sysfs_create_file(cpu_boost_kobj, &cas_boost_status_attr.attr);
