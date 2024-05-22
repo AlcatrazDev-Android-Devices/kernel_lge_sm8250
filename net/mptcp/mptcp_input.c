@@ -921,6 +921,8 @@ static int mptcp_validate_mapping(struct sock *sk, struct sk_buff *skb)
 	return 0;
 }
 
+#include <linux/tcp_input_mptcp_back.h>
+
 /* @return: 0  everything is fine. Just continue processing
  *	    1  subflow is broken stop everything
  *	    -1 this mapping has been put in the meta-receive-queue
