@@ -186,6 +186,7 @@
 #define PERSIST_TIME_NOT_SUPPORTED 2
 
 #define MODE_CMD	41
+#define OFFLINED_ID	1
 #define RESET_ID	2
 
 #define PKT_DROP	0

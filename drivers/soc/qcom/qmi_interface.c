@@ -354,6 +354,7 @@ int qmi_txn_wait(struct qmi_txn *txn, unsigned long timeout)
 	idr_remove(&qmi->txns, txn->id);
 	mutex_unlock(&qmi->txn_lock);
 
+	trace_printk("0x%px, 0x%px, %d, %d\n", qmi, txn, txn->id, txn->result);
 	if (ret == 0)
 		return -ETIMEDOUT;
 	else
@@ -510,6 +511,7 @@ static void qmi_handle_message(struct qmi_handle *qmi,
 		} else {
 			qmi_invoke_handler(qmi, sq, txn, buf, len);
 		}
+		trace_printk("0x%px, 0x%px, %d, %d\n", qmi, txn, hdr->txn_id, txn->id);
 		mutex_unlock(&qmi->txn_lock);
 	} else {
 		/* Create a txn based on the txn_id of the incoming message */

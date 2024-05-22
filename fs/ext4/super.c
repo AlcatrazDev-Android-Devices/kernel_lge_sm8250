@@ -479,6 +479,12 @@ static void ext4_handle_error(struct super_block *sb)
 		 */
 		smp_wmb();
 		sb->s_flags |= SB_RDONLY;
+#ifdef CONFIG_LFS_EXT4
+		if(!strcmp(EXT4_SB(sb)->s_es->s_volume_name,"data") &&
+			system_state != SYSTEM_RESTART &&
+			system_state != SYSTEM_POWER_OFF)
+			printk(KERN_CRIT "EXT4-fs data remounted as RO in ext4_handle_error\n");
+#endif
 	} else if (test_opt(sb, ERRORS_PANIC)) {
 		if (EXT4_SB(sb)->s_journal &&
 		  !(EXT4_SB(sb)->s_journal->j_flags & JBD2_REC_ERR))
@@ -697,6 +703,16 @@ void __ext4_abort(struct super_block *sb, const char *function,
 		if (EXT4_SB(sb)->s_journal)
 			jbd2_journal_abort(EXT4_SB(sb)->s_journal, -EIO);
 		save_error_info(sb, function, line);
+#ifdef CONFIG_LFS_EXT4
+		/* LGE_CHANGE, BSP-FS
+		 * put panic when ext4 partition(data partition) is remounted as Read Only
+		 */
+		if(!strcmp(EXT4_SB(sb)->s_es->s_volume_name,"data") &&
+			system_state != SYSTEM_RESTART &&
+			system_state != SYSTEM_POWER_OFF &&
+			!test_opt(sb, ERRORS_RO))
+			panic("EXT4-fs panic from previous error. remounted as RO \n");
+#endif
 	}
 	if (test_opt(sb, ERRORS_PANIC) && !system_going_down()) {
 		if (EXT4_SB(sb)->s_journal &&
@@ -4761,6 +4777,12 @@ no_journal:
 cantfind_ext4:
 	if (!silent)
 		ext4_msg(sb, KERN_ERR, "VFS: Can't find ext4 filesystem");
+#ifdef CONFIG_LFS_EXT4
+	/* LGE_CHANGE, BSP-FS
+	   add return code if ext4 superblock is damaged
+	*/
+	ret=-ESUPER;
+#endif
 	goto failed_mount;
 
 failed_mount8:
@@ -5136,11 +5158,33 @@ err_out:
 	return err;
 }
 
+#ifdef CONFIG_LFS_EXT4
+/* These avb-ed or verify-ed block list is definitley model based configuration,
+ * so need to get confirm from security part.
+ */
+#define VERITY_BLOCK(name) \
+	(\
+	!strncmp(name, "/", 1) 		||	\
+	!strncmp(name, "system", 6) ||	\
+	!strncmp(name, "vendor", 6)	||	\
+	!strncmp(name, "product", 7)	\
+	)
+#endif
+
 static int ext4_commit_super(struct super_block *sb, int sync)
 {
 	struct ext4_super_block *es = EXT4_SB(sb)->s_es;
 	struct buffer_head *sbh = EXT4_SB(sb)->s_sbh;
 	int error = 0;
+
+#ifdef CONFIG_LFS_EXT4
+	if (es && (sb->s_flags & MS_RDONLY)) {
+		if (VERITY_BLOCK(es->s_volume_name))
+		 printk("EXT4-fs : skipping %s for read only verity block(%s)\n",
+				__func__, es->s_volume_name);
+		 return error;
+	}
+#endif
 
 	if (!sbh)
 		return -EINVAL;

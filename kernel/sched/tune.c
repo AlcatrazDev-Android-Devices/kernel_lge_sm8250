@@ -5,7 +5,7 @@
 #include <linux/printk.h>
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
-
+#include <linux/sched.h>
 #include <trace/events/sched.h>
 
 #include "sched.h"
@@ -522,6 +522,38 @@ void schedtune_dequeue_task(struct task_struct *p, int cpu)
 
 	raw_spin_unlock_irqrestore(&bg->lock, irq_flags);
 }
+
+
+#ifdef CONFIG_SCHED_CAS
+int schedtune_set_touch_boost(int status) {
+	int idx;
+	struct schedtune *st;
+
+	if (unlikely(!schedtune_initialized))
+		return 0;
+
+#ifdef CONFIG_SCHED_WALT
+	for (idx = 0; idx < BOOSTGROUPS_COUNT; idx++) {
+		if (allocated_group[idx]->colocate == 1)
+			break;
+	}
+	printk("[CAS] touch boost = status: %d, idx: %d ", status, idx);
+
+	if (!allocated_group[idx] || allocated_group[idx]->colocate != 1)
+		return 0;
+#else
+	return 0;
+#endif
+
+	st = allocated_group[idx];
+	st->boost = status;
+
+	/* Update CPU boost */
+	schedtune_boostgroup_update(idx, status);
+	return 0;
+}
+
+#endif /* CONFIG_SCHED_CAS */
 
 int schedtune_cpu_boost_with(int cpu, struct task_struct *p)
 {

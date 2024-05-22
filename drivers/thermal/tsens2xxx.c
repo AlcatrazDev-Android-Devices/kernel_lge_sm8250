@@ -762,8 +762,13 @@ static irqreturn_t tsens_tm_irq_thread(int irq, void *data)
 
 		if (upper_thr || lower_thr) {
 			/* Use id for multiple controllers */
+#ifdef CONFIG_LGE_PM_DEBUG
+			pr_info_ratelimited("sensor:%d trigger temp (%d degC)\n",
+				tm->sensor[i].hw_id, temp);
+#else
 			pr_debug("sensor:%d trigger temp (%d degC)\n",
 				tm->sensor[i].hw_id, temp);
+#endif
 			of_thermal_handle_trip_temp(tm->sensor[i].tzd, temp);
 		}
 	}

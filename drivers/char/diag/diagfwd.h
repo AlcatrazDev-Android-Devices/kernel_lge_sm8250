@@ -46,4 +46,7 @@ void diag_md_hdlc_reset_timer_func(struct timer_list *tlist);
 void diag_update_md_clients(unsigned int type);
 void diag_process_stm_mask(uint8_t cmd, uint8_t data_mask,
 	int data_type);
+#ifdef CONFIG_LGE_DIAG_BYPASS
+int diagfwd_mux_write_done_bypass(unsigned char *buf, int len, int buf_ctx, int id);
+#endif
 #endif

@@ -527,9 +527,12 @@ prune:
 	drm_modeset_drop_locks(&ctx);
 	drm_modeset_acquire_fini(&ctx);
 
-	if (list_empty(&connector->modes))
+	if (list_empty(&connector->modes)){
+		if(connector->connector_type == 10){
+			DRM_ERROR("mode count zero !!");
+		}
 		return 0;
-
+	}
 	list_for_each_entry(mode, &connector->modes, head)
 		mode->vrefresh = drm_mode_vrefresh(mode);
 

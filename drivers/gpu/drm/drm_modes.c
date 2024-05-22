@@ -1,5 +1,6 @@
 /*
  * Copyright © 1997-2003 by The XFree86 Project, Inc.
+
  * Copyright © 2007 Dave Airlie
  * Copyright © 2007-2008 Intel Corporation
  *   Jesse Barnes <jesse.barnes@intel.com>
@@ -949,6 +950,7 @@ EXPORT_SYMBOL(drm_mode_duplicate);
 static bool drm_mode_match_timings(const struct drm_display_mode *mode1,
 				   const struct drm_display_mode *mode2)
 {
+	//pr_err("[GSGS] mode1->vrefresh = %d\n", mode1->vrefresh == mode2->vrefresh);
 	return mode1->hdisplay == mode2->hdisplay &&
 		mode1->hsync_start == mode2->hsync_start &&
 		mode1->hsync_end == mode2->hsync_end &&
@@ -958,7 +960,12 @@ static bool drm_mode_match_timings(const struct drm_display_mode *mode1,
 		mode1->vsync_start == mode2->vsync_start &&
 		mode1->vsync_end == mode2->vsync_end &&
 		mode1->vtotal == mode2->vtotal &&
+#if IS_ENABLED(CONFIG_LGE_DISPLAY_COMMON)
+		mode1->vscan == mode2->vscan &&
+		mode1->vrefresh == mode2->vrefresh;
+#else
 		mode1->vscan == mode2->vscan;
+#endif
 }
 
 static bool drm_mode_match_clock(const struct drm_display_mode *mode1,

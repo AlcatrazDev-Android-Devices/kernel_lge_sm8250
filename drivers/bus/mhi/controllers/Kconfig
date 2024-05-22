@@ -11,5 +11,10 @@ config MHI_QCOM
 	  protocol. MHI control driver is the bus master for such modems. As the
 	  bus master driver, it oversees power management operations such as
 	  suspend, resume, powering on and off the device.
-
+config LGE_DUAL_QFUSE
+       tristate "LGE DUAL QFUSE"
+       depends on MHI_BUS
+       help
+	  If you say yes to this option, sbl_fuse.mbn modified by LGE will be loaded
+	  when we want fusing to modem.
 endmenu

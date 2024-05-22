@@ -1532,6 +1532,20 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 				clear_bit(wIndex, &bus_state->resuming_ports);
 				usb_hcd_end_port_resume(&hcd->self, wIndex);
 			}
+#ifdef CONFIG_LGE_USB
+			else if ((temp & PORT_PLS_MASK) == XDEV_RESUME) {
+				if ((temp & PORT_PE) == 0)
+					goto error;
+
+				set_bit(wIndex, &bus_state->resuming_ports);
+				usb_hcd_start_port_resume(&hcd->self, wIndex);
+				spin_unlock_irqrestore(&xhci->lock, flags);
+				usleep_range(21000, 21500);
+				spin_lock_irqsave(&xhci->lock, flags);
+				clear_bit(wIndex, &bus_state->resuming_ports);
+				usb_hcd_end_port_resume(&hcd->self, wIndex);
+			}
+#endif
 			bus_state->port_c_suspend |= 1 << wIndex;
 
 			slot_id = xhci_find_slot_id_by_port(hcd, xhci,

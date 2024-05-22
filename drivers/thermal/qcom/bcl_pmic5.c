@@ -205,13 +205,23 @@ static int bcl_set_ibat(void *data, int low, int high)
 	switch (bat_data->type) {
 	case BCL_IBAT_LVL0:
 		addr = BCL_IBAT_HIGH;
+#ifdef CONFIG_LGE_PM_DEBUG
+		pr_info_ratelimited("ibat high threshold:%d mA ADC:0x%02x\n",
+				ibat_ua, val);
+#else
 		pr_debug("ibat high threshold:%d mA ADC:0x%02x\n",
 				ibat_ua, val);
+#endif
 		break;
 	case BCL_IBAT_LVL1:
 		addr = BCL_IBAT_TOO_HIGH;
+#ifdef CONFIG_LGE_PM_DEBUG
+		pr_info_ratelimited("ibat too high threshold:%d mA ADC:0x%02x\n",
+				ibat_ua, val);
+#else
 		pr_debug("ibat too high threshold:%d mA ADC:0x%02x\n",
 				ibat_ua, val);
+#endif
 		break;
 	default:
 		goto set_trip_exit;
@@ -222,6 +232,9 @@ static int bcl_set_ibat(void *data, int low, int high)
 	bat_data->trip_thresh = ibat_ua;
 
 	if (bat_data->irq_num && !bat_data->irq_enabled) {
+#ifdef CONFIG_LGE_PM_DEBUG
+		pr_info_ratelimited("Ibat:%d irq enable\n", bat_data->irq_num);
+#endif
 		enable_irq(bat_data->irq_num);
 		bat_data->irq_enabled = true;
 	}
@@ -316,12 +329,20 @@ static int bcl_set_vbat(void *data, int low, int high)
 		bat_data->irq_num && bat_data->irq_enabled) {
 		disable_irq_nosync(bat_data->irq_num);
 		bat_data->irq_enabled = false;
+#ifdef CONFIG_LGE_PM_DEBUG
+		pr_info_ratelimited("vbat: disable irq:%d\n", bat_data->irq_num);
+#else
 		pr_debug("vbat: disable irq:%d\n", bat_data->irq_num);
+#endif
 	} else if (low != INT_MIN &&
 		 bat_data->irq_num && !bat_data->irq_enabled) {
 		enable_irq(bat_data->irq_num);
 		bat_data->irq_enabled = true;
+#ifdef CONFIG_LGE_PM_DEBUG
+		pr_info_ratelimited("vbat: enable irq:%d\n", bat_data->irq_num);
+#else
 		pr_debug("vbat: enable irq:%d\n", bat_data->irq_num);
+#endif
 	}
 
 	/*
@@ -420,6 +441,9 @@ bcl_read_exit:
 	return ret;
 }
 
+#ifdef CONFIG_LGE_PM
+extern void wa_control_vbus2_regulator_trigger(void);
+#endif
 static irqreturn_t bcl_handle_irq(int irq, void *data)
 {
 	struct bcl_peripheral_data *perph_data =
@@ -431,11 +455,20 @@ static irqreturn_t bcl_handle_irq(int irq, void *data)
 	bcl_read_register(bcl_perph, BCL_IRQ_STATUS, &irq_status);
 
 	if (irq_status & perph_data->status_bit_idx) {
+#ifdef CONFIG_LGE_PM_DEBUG
+		pr_info_ratelimited("Irq:%d triggered for bcl type:%s. status:%u\n",
+			irq, bcl_int_names[perph_data->type],
+			irq_status);
+#else
 		pr_debug("Irq:%d triggered for bcl type:%s. status:%u\n",
 			irq, bcl_int_names[perph_data->type],
 			irq_status);
+#endif
 		of_thermal_handle_trip_temp(perph_data->tz_dev,
 				perph_data->status_bit_idx);
+#ifdef CONFIG_LGE_PM
+		wa_control_vbus2_regulator_trigger();
+#endif
 	}
 
 	return IRQ_HANDLED;

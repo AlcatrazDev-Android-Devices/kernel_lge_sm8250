@@ -12,6 +12,7 @@
 #include <linux/suspend.h>
 #include <linux/timer.h>
 #include <soc/qcom/minidump.h>
+#include <soc/qcom/lge/board_lge.h>
 
 #include "main.h"
 #include "bus.h"
@@ -2408,6 +2409,11 @@ static ssize_t fs_ready_store(struct device *dev,
 	int fs_ready = 0;
 	struct cnss_plat_data *plat_priv = dev_get_drvdata(dev);
 
+	/* LGE_CHANGE_S, [protocol-wifi@lge.com], 191021, ignore wlan recovery when chargerlogo is started */
+	enum cnss_driver_state i;
+	unsigned long state;
+	/* LGE_CHANGE_E, [protocol-wifi@lge.com], 191021, ignore wlan recovery when chargerlogo is started */
+
 	if (sscanf(buf, "%du", &fs_ready) != 1)
 		return -EINVAL;
 
@@ -2440,6 +2446,19 @@ static ssize_t fs_ready_store(struct device *dev,
 				       CNSS_DRIVER_EVENT_COLD_BOOT_CAL_START,
 				       0, NULL);
 	}
+
+	/* LGE_CHANGE_S, [protocol-wifi@lge.com], 191021, ignore wlan recovery when chargerlogo is started */
+	if (fs_ready == 9) {
+		// clear all driver state
+		cnss_pr_dbg("clear all driver states : 0x%lx \n", plat_priv->driver_state);
+		for (i = 0, state = plat_priv->driver_state; state != 0; state >>= 1, i++) {
+			if (!(state & 0x1)) {
+				continue;
+			}
+			clear_bit(i, &plat_priv->driver_state);
+		}
+	}
+	/* LGE_CHANGE_E, [protocol-wifi@lge.com], 191021, ignore wlan recovery when chargerlogo is started */
 
 	return count;
 }
@@ -2678,6 +2697,12 @@ static int cnss_probe(struct platform_device *plat_dev)
 	struct cnss_plat_data *plat_priv;
 	const struct of_device_id *of_id;
 	const struct platform_device_id *device_id;
+
+	/* Power - Chargerlogo W/A */
+	if (lge_get_boot_mode() == LGE_BOOT_MODE_CHARGERLOGO) {
+		cnss_pr_err("Bootmode is chargerlogo, skip probe!\n");
+		goto out;
+	}
 
 	if (cnss_get_plat_priv(plat_dev)) {
 		cnss_pr_err("Driver is already initialized!\n");

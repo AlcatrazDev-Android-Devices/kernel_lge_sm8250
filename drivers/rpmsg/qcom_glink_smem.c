@@ -84,7 +84,9 @@ static size_t glink_smem_rx_avail(struct qcom_glink_pipe *np)
 
 	if (WARN_ON_ONCE(len > pipe->native.length))
 		len = 0;
-
+#ifdef CONFIG_RPMSG_QCOM_GLINK_DEBUG
+	trace_printk("np : 0x%px h : 0x%x, t : 0x%x\n", np, head, tail);
+#endif
 	return len;
 }
 
@@ -99,7 +101,9 @@ static void glink_smem_rx_peak(struct qcom_glink_pipe *np,
 
 	if (WARN_ON_ONCE(tail > pipe->native.length))
 		return;
-
+#ifdef CONFIG_RPMSG_QCOM_GLINK_DEBUG
+	trace_printk("np : 0x%px, h : 0x%x, t : 0x%x\n", np, le32_to_cpu(*pipe->head), tail);
+#endif
 	tail += offset;
 	if (tail >= pipe->native.length)
 		tail -= pipe->native.length;

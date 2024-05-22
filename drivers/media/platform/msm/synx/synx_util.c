@@ -607,15 +607,15 @@ void *synx_from_handle(s32 synx_obj)
 void synx_release_handle(void *pObj)
 {
 	struct synx_table_row *row = pObj;
-	s32 idx;
-
+    s32 idx;
+	
 	if (!row)
 		return;
 
-	idx = row->index;
-	mutex_lock(&synx_dev->row_locks[idx]);
+    idx = row->index;
+    mutex_lock(&synx_dev->row_locks[idx]);	
 	dma_fence_put(row->fence);
-	mutex_unlock(&synx_dev->row_locks[idx]);
+    mutex_unlock(&synx_dev->row_locks[idx]);	
 }
 
 s32 synx_create_handle(void *pObj)

@@ -88,6 +88,35 @@ enum latency_mode {
 #define MT_IO_FLAGS_ACTIVE_SLOTS	1
 #define MT_IO_FLAGS_PENDING_SLOTS	2
 
+static const char * const touch_status_info_str[HID_TOUCH_EVENT_SIZE] = {
+	[1] = "[DS] Touch WAKEUP : finger",
+	[2] = "[DS] Touch WAKEUP : pen",
+	[3] = "[DS] Touch WAKEUP : Pen + btn",
+	[4] = "[DS] Touch PEN detection",
+	[5] = "[DS] Touch Switch AES Both",
+	/*	[6] = "[DS] Touch Switch AES To 1", -> DS3 don't send it. */
+	/*	[7] = "[DS] Touch Switch AES To 2", -> DS3 don't send it. */
+	[8] = "[DS] Touch reguest update state",
+	[9] = "[DS] Touch PALM detection",
+	[10] = "[DS] Touch_Init",
+	[11] = "[DS] Touch_Resume",
+	[12] = "[DS] Touch_Suspend",
+	[13] = "[DS] Touch_FWupgrade",
+	[14] = "[DS] Touch_Sleep_Control [IC_NORMAL]",
+	[15] = "[DS] Touch_Sleep_Control [IC_DEEP_SLEEP]",
+	[16] = "[DS] Touch_Reset",
+	[17] = "[DS] Touch_Lpwg_Control [TCI_REPORT_ENABLE]",
+	[18] = "[DS] Touch_Lpwg_Control [TCI_REPORT_DISABLE]",
+	[19] = "[DS] Touch_Reg_Write_fail [ERROR]",
+	[20] = "[DS] Touch_Reg_Write_fail [BUSY]",
+	[21] = "[DS] Touch_Reg_Write_fail [TIMEOUT]",
+	[22] = "[DS] Touch_Reg_read_fail [ERROR]",
+	[23] = "[DS] Touch_Reg_read_fail [BUSY]",
+	[24] = "[DS] Touch_Reg_read_fail [TIMEOUT]",
+	[25] = "[DS] Touch_Noise_Mode [EXIT]",
+	[26] = "[DS] Touch_Noise_Mode [ENTER]",
+};
+
 static const bool mtrue = true;		/* default for true */
 static const bool mfalse;		/* default for false */
 static const __s32 mzero;		/* default for 0 */
@@ -100,6 +129,7 @@ struct mt_usages {
 	struct list_head list;
 	__s32 *x, *y, *cx, *cy, *p, *w, *h, *a;
 	__s32 *contactid;	/* the device ContactID assigned to this slot */
+	__s32 *gesture;	/* the device Touch Gesture assigned to this slot */
 	bool *tip_state;	/* is the touch valid? */
 	bool *inrange_state;	/* is the finger in proximity of the sensor? */
 	bool *confidence_state;	/* is the touch made by a finger? */
@@ -176,6 +206,12 @@ static void mt_post_parse_default_settings(struct mt_device *td,
 					   struct mt_application *app);
 static void mt_post_parse(struct mt_device *td, struct mt_application *app);
 
+/* Declare hid touch logging variables */
+static unsigned int old_mask;
+static unsigned int new_mask;
+static unsigned int touch_count;
+static unsigned int is_palm;
+
 /* classes of device behavior */
 #define MT_CLS_DEFAULT				0x0001
 
@@ -231,6 +267,8 @@ static void mt_post_parse(struct mt_device *td, struct mt_application *app);
 static int cypress_compute_slot(struct mt_application *application,
 				struct mt_usages *slot)
 {
+	HID_TOUCH_TRACE();
+
 	if (*slot->contactid != 0 || application->num_received == 0)
 		return *slot->contactid;
 	else
@@ -376,6 +414,8 @@ static ssize_t mt_show_quirks(struct device *dev,
 	struct hid_device *hdev = to_hid_device(dev);
 	struct mt_device *td = hid_get_drvdata(hdev);
 
+	HID_TOUCH_TRACE();
+
 	return sprintf(buf, "%u\n", td->mtclass.quirks);
 }
 
@@ -388,6 +428,8 @@ static ssize_t mt_set_quirks(struct device *dev,
 	struct mt_application *application;
 
 	unsigned long val;
+
+	HID_TOUCH_TRACE();
 
 	if (kstrtoul(buf, 0, &val))
 		return -EINVAL;
@@ -420,6 +462,8 @@ static void mt_get_feature(struct hid_device *hdev, struct hid_report *report)
 	u32 size = hid_report_len(report);
 	u8 *buf;
 
+	HID_TOUCH_TRACE();
+
 	/*
 	 * Do not fetch the feature report if the device has been explicitly
 	 * marked as non-capable.
@@ -450,6 +494,8 @@ static void mt_feature_mapping(struct hid_device *hdev,
 		struct hid_field *field, struct hid_usage *usage)
 {
 	struct mt_device *td = hid_get_drvdata(hdev);
+
+	HID_TOUCH_TRACE();
 
 	switch (usage->hid) {
 	case HID_DG_CONTACTMAX:
@@ -489,6 +535,9 @@ static void set_abs(struct input_dev *input, unsigned int code,
 	int fmin = field->logical_minimum;
 	int fmax = field->logical_maximum;
 	int fuzz = snratio ? (fmax - fmin) / snratio : 0;
+
+	HID_TOUCH_TRACE();
+
 	input_set_abs_params(input, code, fmin, fmax, fuzz, 0);
 	input_abs_set_res(input, code, hidinput_calc_abs_res(field, code));
 }
@@ -502,6 +551,8 @@ static struct mt_usages *mt_allocate_usage(struct hid_device *hdev,
 	if (!usage)
 		return NULL;
 
+	HID_TOUCH_TRACE();
+
 	/* set some defaults so we do not need to check for null pointers */
 	usage->x = DEFAULT_ZERO;
 	usage->y = DEFAULT_ZERO;
@@ -512,6 +563,7 @@ static struct mt_usages *mt_allocate_usage(struct hid_device *hdev,
 	usage->h = DEFAULT_ZERO;
 	usage->a = DEFAULT_ZERO;
 	usage->contactid = DEFAULT_ZERO;
+	usage->gesture = DEFAULT_ZERO;
 	usage->tip_state = DEFAULT_FALSE;
 	usage->inrange_state = DEFAULT_FALSE;
 	usage->confidence_state = DEFAULT_TRUE;
@@ -531,6 +583,8 @@ static struct mt_application *mt_allocate_application(struct mt_device *td,
 				      GFP_KERNEL);
 	if (!mt_application)
 		return NULL;
+
+	HID_TOUCH_TRACE();
 
 	mt_application->application = application;
 	INIT_LIST_HEAD(&mt_application->mt_usages);
@@ -562,6 +616,8 @@ static struct mt_application *mt_find_application(struct mt_device *td,
 	unsigned int application = report->application;
 	struct mt_application *tmp, *mt_application = NULL;
 
+	HID_TOUCH_TRACE();
+
 	list_for_each_entry(tmp, &td->applications, list) {
 		if (application == tmp->application) {
 			if (!(td->mtclass.quirks & MT_QUIRK_SEPARATE_APP_REPORT) ||
@@ -588,6 +644,8 @@ static struct mt_report_data *mt_allocate_report_data(struct mt_device *td,
 	rdata = devm_kzalloc(&td->hdev->dev, sizeof(*rdata), GFP_KERNEL);
 	if (!rdata)
 		return NULL;
+
+	HID_TOUCH_TRACE();
 
 	rdata->report = report;
 	rdata->application = mt_find_application(td, report);
@@ -623,6 +681,8 @@ static struct mt_report_data *mt_find_report_data(struct mt_device *td,
 {
 	struct mt_report_data *tmp, *rdata = NULL;
 
+	HID_TOUCH_TRACE();
+
 	list_for_each_entry(tmp, &td->reports, list) {
 		if (report == tmp->report) {
 			rdata = tmp;
@@ -643,6 +703,8 @@ static void mt_store_field(struct hid_device *hdev,
 {
 	struct mt_usages *usage;
 	__s32 **target;
+
+	HID_TOUCH_TRACE();
 
 	if (list_empty(&application->mt_usages))
 		usage = mt_allocate_usage(hdev, application);
@@ -691,6 +753,8 @@ static int mt_touch_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 	int code;
 	struct hid_usage *prev_usage = NULL;
 
+	HID_TOUCH_TRACE();
+
 	/*
 	 * Model touchscreens providing buttons as touchpads.
 	 */
@@ -707,8 +771,10 @@ static int mt_touch_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 	if (usage->usage_index)
 		prev_usage = &field->usage[usage->usage_index - 1];
 
-	switch (usage->hid & HID_USAGE_PAGE) {
+	if (usage->hid & HID_USAGE_PAGE)
+		TOUCH_D(ABS, "PAGE : 0x%X, usage->hid : 0x%X\n", (usage->hid & HID_USAGE_PAGE), usage->hid);
 
+	switch (usage->hid & HID_USAGE_PAGE) {
 	case HID_UP_GENDESK:
 		switch (usage->hid) {
 		case HID_GD_X:
@@ -834,6 +900,9 @@ static int mt_touch_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 				field->logical_maximum / cls->sn_move : 0, 0);
 			MT_STORE_FIELD(a);
 			return 1;
+		case HID_DG_GESTURE:
+			MT_STORE_FIELD(gesture);
+			return 1;
 		case HID_DG_CONTACTMAX:
 			/* contact max are global to the report */
 			return -1;
@@ -879,6 +948,8 @@ static int mt_compute_slot(struct mt_device *td, struct mt_application *app,
 {
 	__s32 quirks = app->quirks;
 
+	HID_TOUCH_TRACE();
+
 	if (quirks & MT_QUIRK_SLOT_IS_CONTACTID)
 		return *slot->contactid;
 
@@ -900,6 +971,8 @@ static void mt_release_pending_palms(struct mt_device *td,
 {
 	int slotnum;
 	bool need_sync = false;
+
+	HID_TOUCH_TRACE();
 
 	for_each_set_bit(slotnum, app->pending_palm_slots, td->maxcontacts) {
 		clear_bit(slotnum, app->pending_palm_slots);
@@ -923,6 +996,9 @@ static void mt_release_pending_palms(struct mt_device *td,
 static void mt_sync_frame(struct mt_device *td, struct mt_application *app,
 			  struct input_dev *input)
 {
+
+	HID_TOUCH_TRACE();
+
 	if (app->quirks & MT_QUIRK_WIN8_PTP_BUTTONS)
 		input_event(input, EV_KEY, BTN_LEFT, app->left_button_state);
 
@@ -965,6 +1041,9 @@ static int mt_compute_timestamp(struct mt_application *app, __s32 value)
 static int mt_touch_event(struct hid_device *hid, struct hid_field *field,
 				struct hid_usage *usage, __s32 value)
 {
+
+	HID_TOUCH_TRACE();
+
 	/* we will handle the hidinput part later, now remains hiddev */
 	if (hid->claimed & HID_CLAIMED_HIDDEV && hid->hiddev_hid_event)
 		hid->hiddev_hid_event(hid, field, usage, value);
@@ -985,12 +1064,80 @@ static int mt_process_slot(struct mt_device *td, struct input_dev *input,
 	int slotnum;
 	int tool = MT_TOOL_FINGER;
 
+	unsigned int change_mask = 0;
+	unsigned int press_mask = 0;
+	unsigned int release_mask = 0;
+	int i = 0;
+	struct input_mt_slot *test_slot;
+
+	HID_TOUCH_TRACE();
+
 	if (!slot)
 		return -EINVAL;
 
 	if ((quirks & MT_QUIRK_CONTACT_CNT_ACCURATE) &&
 	    app->num_received >= app->num_expected)
 		return -EAGAIN;
+
+	TOUCH_D(ABS, "curdata [ID:%d G:%d TS:%d IS:%d CS:%d]\n",
+		*slot->contactid,
+		*slot->gesture,
+		*slot->tip_state,
+		*slot->inrange_state,
+		*slot->confidence_state);
+
+	TOUCH_D(ABS, "curdata [X:%d Y:%d P:%d W:%d H:%d]\n",
+		*slot->x,
+		*slot->y,
+		*slot->p,
+		*slot->w,
+		*slot->h);
+
+	/* Event validation check */
+	if (*slot->contactid) {
+		/* Check for gesture event declaration */
+		switch (*slot->gesture) {
+			case HID_TOUCH_EVENT_WAKEUP:
+			case HID_TOUCH_EVENT_PEN_WAKEUP:
+			case HID_TOUCH_EVENT_PEN_WAKEUP_BTN:
+			case HID_TOUCH_EVENT_PEN_DETECTION:
+			case HID_TOUCH_EVENT_SWITCH_AES_BOTH:
+				/* case HID_TOUCH_EVENT_SWITCH_AES_TO_1: -> DS don't send it. */
+				/* case HID_TOUCH_EVENT_SWITCH_AES_TO_2: -> DS don't send it. */
+			case HID_TOUCH_EVENT_UPDATE_STATE:
+				return 0;
+				break;
+
+			case HID_TOUCH_STATE_INIT:
+			case HID_TOUCH_STATE_RESUME:
+			case HID_TOUCH_STATE_SUSPEND:
+			case HID_TOUCH_STATE_FWUPGRADE:
+			case HID_TOUCH_STATE_IC_NORMAL:
+			case HID_TOUCH_STATE_IC_DEEPSLEEP:
+			case HID_TOUCH_STATE_IC_RESET:
+			case HID_TOUCH_STATE_TCI_REPORT_ENABLE:
+			case HID_TOUCH_STATE_TCI_REPORT_DISABLE:
+			case HID_TOUCH_STATE_I2C_WRITE_ERROR:
+			case HID_TOUCH_STATE_I2C_WRITE_BUSY:
+			case HID_TOUCH_STATE_I2C_WRITE_TIMEOUT:
+			case HID_TOUCH_STATE_I2C_READ_ERROR:
+			case HID_TOUCH_STATE_I2C_READ_BUSY:
+			case HID_TOUCH_STATE_I2C_READ_TIMEOUT:
+			case HID_TOUCH_STATE_NOISE_MODE_EXIT:
+			case HID_TOUCH_STATE_NOISE_MODE_ENTER:
+				TOUCH_D(ABS, "DS Touch Logging Events (g:%d)\n", *slot->gesture);
+				return 0;
+				break;
+
+			case HID_TOUCH_STATE_PALM:
+			default: /* Normal HID Touch Events */
+			break;
+		}
+	} else {
+		TOUCH_D(ABS, "Untracking gesture events (g:%d)\n", *slot->gesture);
+		if (*slot->gesture >= HID_TOUCH_EVENT_WAKEUP)
+			return 0;
+	}
 
 	if (!(quirks & MT_QUIRK_ALWAYS_VALID)) {
 		if (quirks & MT_QUIRK_VALID_IS_INRANGE)
@@ -1042,6 +1189,31 @@ static int mt_process_slot(struct mt_device *td, struct input_dev *input,
 			active = true;
 			set_bit(slotnum, app->pending_palm_slots);
 		}
+	}
+
+	new_mask = 0;
+	old_mask = 0;
+
+	for (i = 0 ; i < td->maxcontacts; i++) {
+		test_slot = &mt->slots[i];
+		if (input_mt_is_active(test_slot))
+			old_mask |= 1 << i;
+	}
+
+	new_mask = active << slotnum;
+	change_mask = (old_mask ^ new_mask) >> slotnum & 0x1;
+	press_mask = change_mask & ((new_mask >> slotnum) & 0x1);
+	release_mask = change_mask & ((old_mask >> slotnum) & 0x1);
+
+	if (press_mask) {
+		touch_count++;
+		TOUCH_I("%d finger pressed :<%d>(%4d,%4d,%4d)\n",
+			touch_count, slotnum, *slot->x, *slot->y, *slot->p);
+	}
+	if (release_mask) {
+		touch_count--;
+		TOUCH_I("finger released :<%d>(%4d,%4d,%4d)\n",
+		slotnum, *slot->x, *slot->y, *slot->p);
 	}
 
 	input_mt_slot(input, slotnum);
@@ -1109,6 +1281,10 @@ static void mt_process_mt_event(struct hid_device *hid,
 	__s32 quirks = app->quirks;
 	struct input_dev *input = field->hidinput->input;
 
+	HID_TOUCH_TRACE();
+
+	TOUCH_D(ABS, "usage->hid : 0x%X (value:%d)\n", usage->hid, value);
+
 	if (!usage->type || !(hid->claimed & HID_CLAIMED_INPUT))
 		return;
 
@@ -1147,11 +1323,14 @@ static void mt_touch_report(struct hid_device *hid,
 	struct hid_field *field;
 	struct input_dev *input;
 	struct mt_usages *slot;
+	struct mt_usages *first_usage;
 	bool first_packet;
 	unsigned count;
 	int r, n;
 	int scantime = 0;
 	int contact_count = -1;
+
+	HID_TOUCH_TRACE();
 
 	/* sticky fingers release in progress, abort */
 	if (test_and_set_bit_lock(MT_IO_FLAGS_RUNNING, &td->mt_io_flags))
@@ -1187,6 +1366,75 @@ static void mt_touch_report(struct hid_device *hid,
 	first_packet = app->num_received == 0;
 
 	input = report->field[0]->hidinput->input;
+
+	first_usage = list_first_entry(&app->mt_usages, struct mt_usages, list);
+
+	switch (*first_usage->gesture) {
+		case HID_TOUCH_STATE_PALM:
+			if (is_palm) {
+				TOUCH_I("%s - Palm Released\n", __func__, touch_status_info_str[*first_usage->gesture]);
+				is_palm = 0;
+			} else {
+				TOUCH_I("%s - Palm Detected\n", __func__, touch_status_info_str[*first_usage->gesture]);
+				is_palm = 1;
+			}
+
+			*first_usage->gesture = 0;
+			goto skip_input_sync;
+			break;
+
+		case HID_TOUCH_EVENT_WAKEUP:
+		case HID_TOUCH_EVENT_PEN_WAKEUP:
+		case HID_TOUCH_EVENT_PEN_WAKEUP_BTN:
+		case HID_TOUCH_EVENT_PEN_DETECTION:
+			TOUCH_I("[%s] send uevent (%s)\n", __func__, touch_status_info_str[*first_usage->gesture]);
+			hid_touch_send_uevent(hid, *first_usage->gesture);
+			*first_usage->gesture = 0;
+			goto skip_input_sync;
+			break;
+		case HID_TOUCH_EVENT_SWITCH_AES_BOTH:
+			break;
+		case HID_TOUCH_EVENT_UPDATE_STATE:
+			TOUCH_I("[%s] send uevent (%s)\n", __func__, touch_status_info_str[*first_usage->gesture]);
+			hid_touch_send_uevent(hid, *first_usage->gesture);
+			*first_usage->gesture = 0;
+			goto skip_input_sync;
+			break;
+
+		case HID_TOUCH_STATE_INIT:
+		case HID_TOUCH_STATE_RESUME:
+		case HID_TOUCH_STATE_SUSPEND:
+		case HID_TOUCH_STATE_FWUPGRADE:
+		case HID_TOUCH_STATE_IC_NORMAL:
+		case HID_TOUCH_STATE_IC_DEEPSLEEP:
+		case HID_TOUCH_STATE_IC_RESET:
+		case HID_TOUCH_STATE_TCI_REPORT_ENABLE:
+		case HID_TOUCH_STATE_TCI_REPORT_DISABLE:
+			if (is_palm == 1) {
+				is_palm = 0;
+				TOUCH_I("set Palm released\n");
+			}
+
+			TOUCH_I("%s\n", touch_status_info_str[*first_usage->gesture]);
+			*first_usage->gesture = 0;
+			goto skip_input_sync;
+			break;
+		case HID_TOUCH_STATE_I2C_WRITE_ERROR:
+		case HID_TOUCH_STATE_I2C_WRITE_BUSY:
+		case HID_TOUCH_STATE_I2C_WRITE_TIMEOUT:
+		case HID_TOUCH_STATE_I2C_READ_ERROR:
+		case HID_TOUCH_STATE_I2C_READ_BUSY:
+		case HID_TOUCH_STATE_I2C_READ_TIMEOUT:
+		case HID_TOUCH_STATE_NOISE_MODE_EXIT:
+		case HID_TOUCH_STATE_NOISE_MODE_ENTER:
+			TOUCH_I("%s\n", touch_status_info_str[*first_usage->gesture]);
+			*first_usage->gesture = 0;
+			goto skip_input_sync;
+			break;
+
+		default:
+			break;
+	}
 
 	list_for_each_entry(slot, &app->mt_usages, list) {
 		if (!mt_process_slot(td, input, app, slot))
@@ -1227,6 +1475,8 @@ static void mt_touch_report(struct hid_device *hid,
 	 * only affect laggish machines and the ones that have a firmware
 	 * defect.
 	 */
+skip_input_sync:
+
 	if (app->quirks & MT_QUIRK_STICKY_FINGERS) {
 		if (test_bit(MT_IO_FLAGS_PENDING_SLOTS, &td->mt_io_flags))
 			mod_timer(&td->release_timer,
@@ -1246,6 +1496,8 @@ static int mt_touch_input_configured(struct hid_device *hdev,
 	struct mt_class *cls = &td->mtclass;
 	struct input_dev *input = hi->input;
 	int ret;
+
+	HID_TOUCH_TRACE();
 
 	if (!td->maxcontacts)
 		td->maxcontacts = MT_DEFAULT_MAXCONTACT;
@@ -1292,6 +1544,8 @@ static int mt_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 	struct mt_device *td = hid_get_drvdata(hdev);
 	struct mt_application *application;
 	struct mt_report_data *rdata;
+
+	HID_TOUCH_TRACE();
 
 	rdata = mt_find_report_data(td, field->report);
 	if (!rdata) {
@@ -1365,6 +1619,8 @@ static int mt_input_mapped(struct hid_device *hdev, struct hid_input *hi,
 	struct mt_device *td = hid_get_drvdata(hdev);
 	struct mt_report_data *rdata;
 
+	HID_TOUCH_TRACE();
+
 	rdata = mt_find_report_data(td, field->report);
 	if (rdata && rdata->is_mt_collection) {
 		/* We own these mappings, tell hid-input to ignore them */
@@ -1381,6 +1637,8 @@ static int mt_event(struct hid_device *hid, struct hid_field *field,
 	struct mt_device *td = hid_get_drvdata(hid);
 	struct mt_report_data *rdata;
 
+	HID_TOUCH_TRACE();
+
 	rdata = mt_find_report_data(td, field->report);
 	if (rdata && rdata->is_mt_collection)
 		return mt_touch_event(hid, field, usage, value);
@@ -1393,6 +1651,8 @@ static void mt_report(struct hid_device *hid, struct hid_report *report)
 	struct mt_device *td = hid_get_drvdata(hid);
 	struct hid_field *field = report->field[0];
 	struct mt_report_data *rdata;
+
+	HID_TOUCH_TRACE();
 
 	if (!(hid->claimed & HID_CLAIMED_INPUT))
 		return;
@@ -1420,6 +1680,8 @@ static bool mt_need_to_apply_feature(struct hid_device *hdev,
 	char *buf;
 	u32 report_len;
 	int max;
+
+	HID_TOUCH_TRACE();
 
 	switch (usage->hid) {
 	case HID_DG_INPUTMODE:
@@ -1486,6 +1748,8 @@ static void mt_set_modes(struct hid_device *hdev, enum latency_mode latency,
 	bool update_report;
 	bool inputmode_found = false;
 
+	HID_TOUCH_TRACE();
+
 	rep_enum = &hdev->report_enum[HID_FEATURE_REPORT];
 	list_for_each_entry(rep, &rep_enum->report_list, list) {
 		update_report = false;
@@ -1519,6 +1783,8 @@ static void mt_post_parse_default_settings(struct mt_device *td,
 {
 	__s32 quirks = app->quirks;
 
+	HID_TOUCH_TRACE();
+
 	/* unknown serial device needs special quirks */
 	if (list_is_singular(&app->mt_usages)) {
 		quirks |= MT_QUIRK_ALWAYS_VALID;
@@ -1533,6 +1799,8 @@ static void mt_post_parse_default_settings(struct mt_device *td,
 
 static void mt_post_parse(struct mt_device *td, struct mt_application *app)
 {
+	HID_TOUCH_TRACE();
+
 	if (!app->have_contact_count)
 		app->quirks &= ~MT_QUIRK_CONTACT_CNT_ACCURATE;
 }
@@ -1545,6 +1813,8 @@ static int mt_input_configured(struct hid_device *hdev, struct hid_input *hi)
 	struct mt_application *mt_application = NULL;
 	struct hid_report *report;
 	int ret;
+
+	HID_TOUCH_TRACE();
 
 	list_for_each_entry(report, &hi->reports, hidinput_list) {
 		rdata = mt_find_report_data(td, report);
@@ -1602,6 +1872,8 @@ static int mt_input_configured(struct hid_device *hdev, struct hid_input *hi)
 
 static void mt_fix_const_field(struct hid_field *field, unsigned int usage)
 {
+	HID_TOUCH_TRACE();
+
 	if (field->usage[0].hid != usage ||
 	    !(field->flags & HID_MAIN_ITEM_CONSTANT))
 		return;
@@ -1614,6 +1886,8 @@ static void mt_fix_const_fields(struct hid_device *hdev, unsigned int usage)
 {
 	struct hid_report *report;
 	int i;
+
+	HID_TOUCH_TRACE();
 
 	list_for_each_entry(report,
 			    &hdev->report_enum[HID_INPUT_REPORT].report_list,
@@ -1633,6 +1907,8 @@ static void mt_release_contacts(struct hid_device *hid)
 	struct hid_input *hidinput;
 	struct mt_application *application;
 	struct mt_device *td = hid_get_drvdata(hid);
+
+	HID_TOUCH_TRACE();
 
 	list_for_each_entry(hidinput, &hid->inputs, list) {
 		struct input_dev *input_dev = hidinput->input;
@@ -1661,6 +1937,8 @@ static void mt_expired_timeout(struct timer_list *t)
 	struct mt_device *td = from_timer(td, t, release_timer);
 	struct hid_device *hdev = td->hdev;
 
+	HID_TOUCH_TRACE();
+
 	/*
 	 * An input report came in just before we release the sticky fingers,
 	 * it will take care of the sticky fingers.
@@ -1677,6 +1955,8 @@ static int mt_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	int ret, i;
 	struct mt_device *td;
 	const struct mt_class *mtclass = mt_classes; /* MT_CLS_DEFAULT */
+
+	HID_TOUCH_TRACE();
 
 	for (i = 0; mt_classes[i].name ; i++) {
 		if (id->driver_data == mt_classes[i].name) {
@@ -1742,6 +2022,8 @@ static int mt_probe(struct hid_device *hdev, const struct hid_device_id *id)
 #ifdef CONFIG_PM
 static int mt_reset_resume(struct hid_device *hdev)
 {
+	HID_TOUCH_TRACE();
+
 	mt_release_contacts(hdev);
 	mt_set_modes(hdev, HID_LATENCY_NORMAL, true, true);
 	return 0;
@@ -1753,6 +2035,8 @@ static int mt_resume(struct hid_device *hdev)
 	 * It should be safe to send it to other devices too.
 	 * Tested on 3M, Stantum, Cypress, Zytronic, eGalax, and Elan panels. */
 
+	HID_TOUCH_TRACE();
+
 	hid_hw_idle(hdev, 0, 0, HID_REQ_SET_IDLE);
 
 	return 0;
@@ -1762,6 +2046,14 @@ static int mt_resume(struct hid_device *hdev)
 static void mt_remove(struct hid_device *hdev)
 {
 	struct mt_device *td = hid_get_drvdata(hdev);
+
+	HID_TOUCH_TRACE();
+
+	/* Clear hid touch logging variables */
+	old_mask = 0;
+	new_mask = 0;
+	touch_count = 0;
+	is_palm = 0;
 
 	del_timer_sync(&td->release_timer);
 

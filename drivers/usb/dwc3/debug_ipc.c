@@ -51,6 +51,10 @@ void dwc3_dbg_print(struct dwc3 *dwc, u8 ep_num, const char *name,
 
 	ipc_log_string(dwc->dwc_ipc_log_ctxt, "%02X %-25.25s %4i ?\t%s",
 			ep_num, name, status, extra);
+#ifdef CONFIG_LGE_USB
+	dev_dbg(dwc->dev, "%02X %-25.25s %4i ?\t%s",
+			ep_num, name, status, extra);
+#endif
 }
 
 /**

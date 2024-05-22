@@ -22,6 +22,12 @@
 #include "diagfwd_mhi.h"
 #include "diag_dci.h"
 #include "diag_ipc_logging.h"
+#ifdef CONFIG_LGE_DIAG_BYPASS
+#include "lg_diag_bypass.h"
+#endif
+#ifdef CONFIG_LGE_USB_DIAG_LOCK
+#include "diag_lock.h"
+#endif
 
 #ifdef CONFIG_MHI_BUS
 #define diag_mdm_init		diag_mhi_init
@@ -30,6 +36,10 @@
 #endif
 
 #define BRIDGE_TO_MUX(x)	(x + DIAG_MUX_BRIDGE_BASE)
+
+#ifdef CONFIG_LGE_DIAG_BYPASS
+extern int diag_bypass_enable;
+#endif
 
 struct diagfwd_bridge_info bridge_info[NUM_REMOTE_DEV] = {
 	{
@@ -312,6 +322,26 @@ int diagfwd_bridge_write(int id, unsigned char *buf, int len)
 {
 	if (id < 0 || id >= NUM_REMOTE_DEV)
 		return -EINVAL;
+/* [LGE_S][BSP_Modem] LGSSL to support testmode cmd */
+#ifdef CONFIG_LGE_DM_APP
+	if (driver->logging_mode[DIAG_MD_MDM] != DIAG_MEMORY_DEVICE_MODE)
+	{
+#endif
+/* [LGE_E][BSP_Modem] LGSSL to support testmode cmd */
+#ifdef CONFIG_LGE_USB_DIAG_LOCK
+	if(id == 0){
+		if(!diag_lock_is_allowed()){
+			pr_info("diag : %s diag lock mdm \n",__func__);
+			return 0;
+		}
+	}
+#endif
+/* [LGE_S][BSP_Modem] LGSSL to support testmode cmd */
+#ifdef CONFIG_LGE_DM_APP
+	}
+#endif
+/* [LGE_E][BSP_Modem] LGSSL to support testmode cmd */
+
 	if (bridge_info[id].dev_ops && bridge_info[id].dev_ops->write) {
 		return bridge_info[id].dev_ops->write(bridge_info[id].id,
 							bridge_info[id].ctxt,
@@ -337,3 +367,16 @@ uint16_t diag_get_remote_device_mask(void)
 	return remote_dev;
 }
 
+#ifdef CONFIG_LGE_DIAG_BYPASS
+int diagfwd_bridge_mux_connect_bypass(int id, int mode) {
+    return diagfwd_bridge_mux_connect(id, mode);
+}
+
+int diagfwd_bridge_mux_write_done_bypass(unsigned char *buf, int len, int buf_ctx, int id) {
+    return diagfwd_bridge_mux_write_done(buf, len, buf_ctx, id);
+}
+
+int diagfwd_bridge_mux_disconnect_bypass(int id, int mode) {
+    return diagfwd_bridge_mux_disconnect(id, mode);
+}
+#endif

@@ -85,3 +85,5 @@ obj-$(CONFIG_INPUT_WM831X_ON)		+= wm831x-on.o
 obj-$(CONFIG_INPUT_XEN_KBDDEV_FRONTEND)	+= xen-kbdfront.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_IDEAPAD_SLIDEBAR)	+= ideapad_slidebar.o
+obj-$(CONFIG_SAR_ALMF04_C2_C3_12QFN)	+= almf04_c2_c3_12qfn.o
+obj-$(CONFIG_SENSORS_TCS3407) 		+= tcs3407/

@@ -422,3 +422,9 @@ config DRM_PANEL_ORIENTATION_QUIRKS
 config DRM_LIB_RANDOM
 	bool
 	default n
+
+config LGE_DISPLAY_COMMON
+	default y
+	bool "LGE DISPLAY COMMON"
+	help
+	  The LGE DISPLAY COMMON feature.

@@ -18,6 +18,9 @@
 #include <linux/suspend.h>
 #include <linux/mhi.h>
 #include "mhi_qcom.h"
+#ifdef CONFIG_LGE_DUAL_QFUSE
+#include "lge_qfuse.h"
+#endif
 
 struct arch_info {
 	struct mhi_dev *mhi_dev;
@@ -43,7 +46,7 @@ struct arch_info {
 
 #ifdef CONFIG_MHI_DEBUG
 
-#define MHI_IPC_LOG_PAGES (100)
+#define MHI_IPC_LOG_PAGES (110)
 #define MHI_CNTRL_LOG_PAGES (25)
 enum MHI_DEBUG_LEVEL  mhi_ipc_log_lvl = MHI_MSG_LVL_VERBOSE;
 
@@ -313,6 +316,10 @@ static void mhi_bl_dl_cb(struct mhi_device *mhi_device,
 	/* force a null at last character */
 	buf[mhi_result->bytes_xferd - 1] = 0;
 
+#ifdef CONFIG_LGE_DUAL_QFUSE
+	check_cp_fused(buf);
+#endif
+
 	if (mhi_result->bytes_xferd >= MAX_MSG_SIZE) {
 		do {
 			token = strsep((char **)&buf, delim);
@@ -323,6 +330,9 @@ static void mhi_bl_dl_cb(struct mhi_device *mhi_device,
 	} else {
 		ipc_log_string(arch_info->boot_ipc_log, "%s %s", DLOG, buf);
 	}
+// LGE_ModemBSP_S, [DEBUG] Print esoc sbl log on kernel log
+        pr_err("esoc sbl : %s", buf);
+// LGE_ModemBSP_E, [DEBUG] Print esoc sbl log on kernel log
 }
 
 static void mhi_bl_dummy_cb(struct mhi_device *mhi_dev,
@@ -349,6 +359,10 @@ void mhi_arch_mission_mode_enter(struct mhi_controller *mhi_cntrl)
 
 	ipc_log_string(arch_info->boot_ipc_log,
 		       HLOG "Device entered mission mode\n");
+
+#ifdef CONFIG_LGE_DUAL_QFUSE
+	write_fuse_status(QFUSE_ALREADY_BLOWNED);
+#endif
 
 	/* disable boot logger channel */
 	if (boot_dev)
@@ -405,6 +419,14 @@ static int mhi_bl_probe(struct mhi_device *mhi_device,
 							 node_name, 0);
 	ipc_log_string(arch_info->boot_ipc_log, HLOG
 		       "Entered SBL, Session ID:0x%x\n", mhi_cntrl->session_id);
+
+// LGE_ModemBSP_S, [DEBUG] Print esoc sbl log on kernel log
+	pr_err("esoc sbl : Entered SBL, Session ID:0x%x", mhi_cntrl->session_id);
+// LGE_ModemBSP_E, [DEBUG] Print esoc sbl log on kernel log
+
+#ifdef CONFIG_LGE_DUAL_QFUSE
+	write_fuse_status(SBL_LOAD);
+#endif
 
 	return 0;
 }

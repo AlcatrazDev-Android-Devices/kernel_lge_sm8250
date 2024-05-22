@@ -43,6 +43,10 @@
 #include <linux/compat.h>
 #endif
 
+#ifdef CONFIG_LGE_DIAG_BYPASS
+#include "lg_diag_bypass.h"
+#endif
+
 MODULE_DESCRIPTION("Diag Char Driver");
 MODULE_LICENSE("GPL v2");
 
@@ -820,7 +824,8 @@ struct diag_cmd_reg_entry_t *diag_cmd_search(
 						item->proc != APPS_DATA) {
 						continue;
 					}
-					if (entry->subsys_id != RESET_ID &&
+					if ((entry->subsys_id != RESET_ID &&
+						entry->subsys_id != OFFLINED_ID) &&
 						item->proc == APPS_DATA) {
 						continue;
 					}
@@ -4108,8 +4113,14 @@ static ssize_t diagchar_write(struct file *file, const char __user *buf,
 	else
 		token = 0;
 
+#ifdef CONFIG_LGE_DIAG_BYPASS
+	if (driver->logging_mode[token] == DIAG_USB_MODE &&
+		!driver->usb_connected &&
+		!lge_bypass_status()) {
+#else
 	if (driver->logging_mode[token] == DIAG_USB_MODE &&
 		!driver->usb_connected) {
+#endif
 		if (!((pkt_type == DCI_DATA_TYPE) ||
 		    (pkt_type == DCI_PKT_TYPE) ||
 		    (pkt_type & DATA_TYPE_DCI_LOG) ||

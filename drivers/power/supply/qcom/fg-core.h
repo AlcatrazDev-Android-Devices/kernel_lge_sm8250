@@ -76,7 +76,11 @@
 #define FG_PARALLEL_EN_VOTER	"fg_parallel_en"
 #define MEM_ATTN_IRQ_VOTER	"fg_mem_attn_irq"
 
+#ifdef CONFIG_LGE_PM
+#define FG_DEBUG_BOARD_VOTER	"fg_debug_board"
+#else
 #define DEBUG_BOARD_VOTER	"fg_debug_board"
+#endif
 
 #define BUCKET_COUNT			8
 #define BUCKET_SOC_PCT			(256 / BUCKET_COUNT)
@@ -110,6 +114,9 @@ enum fg_debug_flag {
 	FG_CAP_LEARN		= BIT(7), /* Show capacity learning */
 	FG_TTF			= BIT(8), /* Show time to full */
 	FG_FVSS			= BIT(9), /* Show FVSS */
+#ifdef CONFIG_LGE_PM
+	FG_LGE			= BIT(10),
+#endif
 };
 
 enum awake_reasons {

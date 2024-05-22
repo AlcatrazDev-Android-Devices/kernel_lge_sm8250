@@ -156,6 +156,9 @@ struct ufs_dev_fix {
  */
 #define UFS_DEVICE_QUIRK_WAIT_AFTER_REF_CLK_UNGATE	(1 << 11)
 
+#ifdef CONFIG_LFS_IOSCHED_EXTENSION
+#define UFS_DEVICE_QUIRK_CMD_ORDERED (1 << 15)
+#endif
 
 /*
  * Few samsung UFS device models advertise PA_HIBERN8TIME as

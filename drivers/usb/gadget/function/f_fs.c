@@ -36,6 +36,10 @@
 #include "u_os_desc.h"
 #include "configfs.h"
 
+#ifdef CONFIG_LGE_USB_GADGET
+#include <linux/ctype.h>
+#endif
+
 #define FUNCTIONFS_MAGIC	0xa647361 /* Chosen by a honest dice roll ;) */
 
 #define NUM_PAGES	10 /* # of pages for ipc logging */
@@ -384,7 +388,11 @@ static ssize_t ffs_ep0_write(struct file *file, const char __user *buf,
 
 		/* Handle data */
 		if (ffs->state == FFS_READ_DESCRIPTORS) {
+#ifdef CONFIG_LGE_USB_GADGET
+			pr_info("%s: read descriptors\n", ffs->dev_name);
+#else
 			pr_info("read descriptors\n");
+#endif
 			ret = __ffs_data_got_descs(ffs, data, len);
 			if (unlikely(ret < 0))
 				break;
@@ -392,7 +400,11 @@ static ssize_t ffs_ep0_write(struct file *file, const char __user *buf,
 			ffs->state = FFS_READ_STRINGS;
 			ret = len;
 		} else {
+#ifdef CONFIG_LGE_USB_GADGET
+			pr_info("%s: read strings\n", ffs->dev_name);
+#else
 			pr_info("read strings\n");
+#endif
 			ret = __ffs_data_got_strings(ffs, data, len);
 			if (unlikely(ret < 0))
 				break;
@@ -646,6 +658,10 @@ static int ffs_ep0_open(struct inode *inode, struct file *file)
 {
 	struct ffs_data *ffs = inode->i_private;
 
+#ifdef CONFIG_LGE_USB_GADGET
+	pr_info("%s: %s\n", ffs->dev_name, __func__);
+#endif
+
 	ENTER();
 
 	ffs_log("state %d setup_state %d flags %lu opened %d", ffs->state,
@@ -663,6 +679,10 @@ static int ffs_ep0_open(struct inode *inode, struct file *file)
 static int ffs_ep0_release(struct inode *inode, struct file *file)
 {
 	struct ffs_data *ffs = file->private_data;
+
+#ifdef CONFIG_LGE_USB_GADGET
+	pr_info("%s: %s\n", ffs->dev_name, __func__);
+#endif
 
 	ENTER();
 
@@ -1185,6 +1205,11 @@ ffs_epfile_open(struct inode *inode, struct file *file)
 	struct ffs_epfile *epfile = inode->i_private;
 	struct ffs_data *ffs = epfile->ffs;
 
+#ifdef CONFIG_LGE_USB_GADGET
+	pr_info("%s: %s: %s\n", epfile->ffs->dev_name, __func__,
+		file->f_path.dentry->d_iname);
+#endif
+
 	ENTER();
 
 	ffs_log("%s: state %d setup_state %d flag %lu opened %u",
@@ -1334,6 +1359,11 @@ ffs_epfile_release(struct inode *inode, struct file *file)
 	struct ffs_epfile *epfile = inode->i_private;
 	struct ffs_data *ffs = epfile->ffs;
 	unsigned long flags;
+
+#ifdef CONFIG_LGE_USB_GADGET
+	pr_info("%s: %s: %s\n", epfile->ffs->dev_name, __func__,
+		file->f_path.dentry->d_iname);
+#endif
 
 	ENTER();
 
@@ -3316,6 +3346,10 @@ static int _ffs_func_bind(struct usb_configuration *c,
 	int fs_len, hs_len, ss_len, ret, i;
 	struct ffs_ep *eps_ptr;
 
+#ifdef CONFIG_LGE_USB_GADGET
+	int j;
+#endif
+
 	/* Make it a single chunk, less management later on */
 	vla_group(d);
 	vla_item_with_sz(d, struct ffs_ep, eps, ffs->eps_count);
@@ -3448,6 +3482,14 @@ static int _ffs_func_bind(struct usb_configuration *c,
 				i * sizeof(struct usb_os_desc);
 			desc->ext_compat_id =
 				vla_ptr(vlabuf, d, ext_compat) + i * 16;
+#ifdef CONFIG_LGE_USB_GADGET
+			for (j = 0; j < 16; j++) {
+				if (!ffs->dev_name[j])
+					break;
+				desc->ext_compat_id[j] =
+					toupper(ffs->dev_name[j]);
+			}
+#endif
 			INIT_LIST_HEAD(&desc->ext_prop);
 		}
 		ret = ffs_do_os_descs(ffs, ffs->ms_os_descs_count,
@@ -3463,6 +3505,35 @@ static int _ffs_func_bind(struct usb_configuration *c,
 		c->cdev->use_os_string ? ffs->interfaces_count : 0;
 
 	/* And we're done */
+#ifdef CONFIG_LGE_USB_GADGET_MULTI_CONFIG
+	if (c->bConfigurationValue > 0) {
+		struct usb_configuration *c_tmp;
+
+		list_for_each_entry(c_tmp, &c->cdev->configs, list) {
+			struct usb_function *f_tmp;
+
+			if (c_tmp->bConfigurationValue >=
+			    c->bConfigurationValue)
+				break;
+
+			list_for_each_entry(f_tmp, &c_tmp->functions, list) {
+				struct ffs_data *ffs_tmp;
+
+				if (strcmp(f_tmp->name, f->name))
+					continue;
+
+				ffs_tmp = ffs_func_from_usb(f_tmp)->ffs;
+
+				if (!strcmp(ffs_tmp->dev_name, ffs->dev_name)) {
+					pr_info("%s: skip FUNCTIONFS_BIND event\n",
+						ffs->dev_name);
+					return 0;
+				}
+			}
+		}
+	}
+#endif
+
 	ffs_event_add(ffs, FUNCTIONFS_BIND);
 
 	return 0;
