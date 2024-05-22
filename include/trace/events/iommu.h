@@ -168,6 +168,7 @@ TRACE_EVENT(map_sg,
 	)
 );
 
+#ifdef CONFIG_LGE_MORE_IOMMU_TRACE
 TRACE_EVENT(io_pgtable_free,
 
 	TP_PROTO(u64 *table_base, u64 *pudp, u64 pud, unsigned long iova, int block),
@@ -221,6 +222,7 @@ TRACE_EVENT(io_pgtable_install,
 			__entry->pud, __entry->block
 	)
 );
+#endif /* CONFIG_LGE_MORE_IOMMU_TRACE */
 
 DECLARE_EVENT_CLASS(iommu_error,
 

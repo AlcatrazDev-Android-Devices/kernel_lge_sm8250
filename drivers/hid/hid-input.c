@@ -584,7 +584,9 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 	int max = 0, code;
 	unsigned long *bit = NULL;
 
+#ifdef CONFIG_LGE_HID_STYLUS_PEN
 	HID_TOUCH_TRACE();
+#endif /* CONFIG_LGE_HID_STYLUS_PEN */
 
 	field->hidinput = hidinput;
 
@@ -1508,7 +1510,9 @@ static int hidinput_input_event(struct input_dev *dev, unsigned int type,
 	struct hid_field *field;
 	int offset;
 
+#ifdef CONFIG_LGE_HID_STYLUS_PEN
 	HID_TOUCH_TRACE();
+#endif /* CONFIG_LGE_HID_STYLUS_PEN */
 
 	if (type == EV_FF)
 		return input_ff_event(dev, type, code, value);
@@ -1750,7 +1754,9 @@ static inline void hidinput_configure_usages(struct hid_input *hidinput,
 {
 	int i, j;
 
+#ifdef CONFIG_LGE_HID_STYLUS_PEN
 	HID_TOUCH_TRACE();
+#endif /* CONFIG_LGE_HID_STYLUS_PEN */
 
 	for (i = 0; i < report->maxfield; i++)
 		for (j = 0; j < report->field[i]->maxusage; j++)
@@ -1775,7 +1781,9 @@ int hidinput_connect(struct hid_device *hid, unsigned int force)
 	INIT_LIST_HEAD(&hid->inputs);
 	INIT_WORK(&hid->led_work, hidinput_led_worker);
 
+#ifdef CONFIG_LGE_HID_STYLUS_PEN
 	HID_TOUCH_TRACE();
+#endif /* CONFIG_LGE_HID_STYLUS_PEN */
 
 	hid->status &= ~HID_STAT_DUP_DETECTED;
 
@@ -1871,7 +1879,9 @@ void hidinput_disconnect(struct hid_device *hid)
 {
 	struct hid_input *hidinput, *next;
 
+#ifdef CONFIG_LGE_HID_STYLUS_PEN
 	HID_TOUCH_TRACE();
+#endif /* CONFIG_LGE_HID_STYLUS_PEN */
 
 	hidinput_cleanup_battery(hid);
 

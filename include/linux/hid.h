@@ -306,8 +306,9 @@ struct hid_item {
 #define HID_DG_BARRELSWITCH2	0x000d005a
 #define HID_DG_TOOLSERIALNUMBER	0x000d005b
 #define HID_DG_LATENCYMODE	0x000d0060
+#ifdef CONFIG_LGE_HID_STYLUS_PEN
 #define HID_DG_GESTURE		0x000d005c
-
+#endif /* CONFIG_LGE_HID_STYLUS_PEN */
 #define HID_VD_ASUS_CUSTOM_MEDIA_KEYS	0xff310076
 /*
  * HID report types --- Ouch! HID spec says 1 2 3!
@@ -547,6 +548,7 @@ enum hid_battery_status {
 	HID_BATTERY_REPORTED,		/* Device sent unsolicited battery strength report */
 };
 
+#ifdef CONFIG_LGE_HID_STYLUS_PEN
 enum hid_touch_event_str {
 	/* Uevent */
 	HID_TOUCH_EVENT_WAKEUP			= 1,
@@ -612,6 +614,7 @@ extern int hid_touch_debug_mask;
 #define __SHORT_FILE__ (strrchr(__FILE__, '/') + 1)
 #define HID_TOUCH_TRACE()	TOUCH_D(TRACE, "- %s(%s) %d\n",		\
 		__func__, __SHORT_FILE__, __LINE__)
+#endif /* CONFIG_LGE_HID_STYLUS_PEN */
 
 struct hid_driver;
 struct hid_ll_driver;
@@ -634,8 +637,10 @@ struct hid_device {							/* device report descriptor */
 	unsigned country;						/* HID country */
 	struct hid_report_enum report_enum[HID_REPORT_TYPES];
 	struct work_struct led_work;					/* delayed LED worker */
+#ifdef CONFIG_LGE_HID_STYLUS_PEN
 	struct workqueue_struct *uevent_wq;
 	struct work_struct uevent_work;
+#endif /* CONFIG_LGE_HID_STYLUS_PEN */
 
 	struct semaphore driver_input_lock;				/* protects the current driver */
 	struct device dev;						/* device */
@@ -929,7 +934,9 @@ static inline bool hid_is_usb(struct hid_device *hdev)
 
 extern int hid_debug;
 
+#ifdef CONFIG_LGE_HID_STYLUS_PEN
 extern void hid_touch_send_uevent(struct hid_device *hid, int type);
+#endif /* CONFIG_LGE_HID_STYLUS_PEN */
 extern bool hid_ignore(struct hid_device *);
 extern int hid_add_device(struct hid_device *);
 extern void hid_destroy_device(struct hid_device *);
