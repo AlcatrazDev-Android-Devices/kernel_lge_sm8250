@@ -56,6 +56,7 @@
 #include <trace/events/skb.h>
 #include <trace/events/udp.h>
 #include "udp_impl.h"
+#include <net/patchcodeid.h>
 
 static bool udp6_lib_exact_dif_match(struct net *net, struct sk_buff *skb)
 {

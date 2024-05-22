@@ -55,7 +55,6 @@ static DEFINE_SPINLOCK(suspend_lock);
 static u64 suspend_time;
 static u64 suspend_start;
 static unsigned long acc_total, acc_relative_busy;
-
 static struct msm_adreno_extended_profile *partner_gpu_profile;
 static void do_partner_start_event(struct work_struct *work);
 static void do_partner_stop_event(struct work_struct *work);
@@ -129,7 +128,6 @@ static ssize_t suspend_time_show(struct device *dev,
 }
 
 static DEVICE_ATTR_RO(gpu_load);
-
 static DEVICE_ATTR_RO(suspend_time);
 
 static const struct device_attribute *adreno_tz_attr_list[] = {

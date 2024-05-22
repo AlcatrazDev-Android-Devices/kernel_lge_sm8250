@@ -1641,6 +1641,11 @@ irqreturn_t mhi_msi_handlr(int irq_number, void *dev)
 		return IRQ_HANDLED;
 	}
 
+        // LGE_ModemBSP_S, [DEBUG][case#04913264] sdx55m_apps@remotefs_sahara.c:850:Assertion remotefs_sahara_info.sahara_status == SAHARA_END_OF_IMG_TRANSFER fail
+        MHI_VERB("mhi_msi_handlr\n");
+        MHI_VERB("mhi_event->priority : %d\n",mhi_event->priority);
+        // LGE_ModemBSP_E, [DEBUG][case#04913264]
+
 	if (IS_MHI_ER_PRIORITY_HIGH(mhi_event))
 		tasklet_hi_schedule(&mhi_event->task);
 	else

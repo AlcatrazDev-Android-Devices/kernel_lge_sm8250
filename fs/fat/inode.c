@@ -1613,6 +1613,10 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 	int debug;
 	long error;
 	char buf[50];
+#ifdef CONFIG_LFS_FAT_FIX_BAD_FORMAT
+	u32 device_total_clusters = 0;
+	int need_update_badcluster = 0;
+#endif
 
 	/*
 	 * GFP_KERNEL is ok here, because while we do hold the
@@ -1867,6 +1871,31 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 	}
 
 	fat_set_state(sb, 1, 0);
+
+#ifdef CONFIG_LFS_FAT_FIX_BAD_FORMAT
+	if (!(sb->s_flags & MS_RDONLY)) {
+		fat_msg(sb, KERN_WARNING, "filesystem total sector %llu , device total sectors(%lld blocks)",
+					(u64)logical_sector_size * (u64)bpb.fat_total_sect >> sb->s_blocksize_bits,
+					sb->s_bdev->bd_inode->i_size >> sb->s_blocksize_bits);
+
+		device_total_clusters = ((sb->s_bdev->bd_inode->i_size/logical_sector_size) - sbi->data_start)/sbi->sec_per_clus;
+		fat_msg(sb, KERN_WARNING, "file system total clusters : %u "
+						", device total clusters (%u)", total_clusters, device_total_clusters);
+
+		/* Bad formatted file system */
+		if((u64)logical_sector_size * (u64)bpb.fat_total_sect > sb->s_bdev->bd_inode->i_size) {
+				fat_msg(sb, KERN_WARNING, "bad geometry: block count %llu "
+						"exceeds size of device (%lld blocks)",
+						(u64)logical_sector_size * (u64)bpb.fat_total_sect >> sb->s_blocksize_bits,
+						sb->s_bdev->bd_inode->i_size >> sb->s_blocksize_bits);
+				need_update_badcluster = device_total_clusters + FAT_START_ENT;
+		}
+
+		if(need_update_badcluster)
+			fat_ent_update_badclusters_after(sb,need_update_badcluster);
+	}
+#endif
+
 	return 0;
 
 out_invalid:

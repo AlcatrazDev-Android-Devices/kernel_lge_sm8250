@@ -117,7 +117,11 @@ enum {
 	FORCE_INOV_DISABLE_BIT	= BIT(1),
 };
 
+#ifdef CONFIG_LGE_PM
+static int debug_mask = PR_PARALLEL;
+#else
 static int debug_mask;
+#endif
 
 #define pl_dbg(chip, reason, fmt, ...)				\
 	do {								\
@@ -938,6 +942,10 @@ static int pl_fcc_main_vote_callback(struct votable *votable, void *data,
 			  &pval);
 }
 
+#ifdef CONFIG_LGE_PM
+extern bool unified_bootmode_usermode(void);
+extern bool is_bad_pps_detected(void);
+#endif
 static int pl_fcc_vote_callback(struct votable *votable, void *data,
 			int total_fcc_ua, const char *client)
 {
@@ -945,6 +953,10 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 	int master_fcc_ua = total_fcc_ua, slave_fcc_ua = 0;
 	int cp_fcc_ua = 0, rc = 0;
 	union power_supply_propval pval = {0, };
+#ifdef CONFIG_LGE_PM
+	int min_cp_lim_ua = 0;
+	int min_fcc_main_ua = 800000;
+#endif
 
 	if (total_fcc_ua < 0)
 		return 0;
@@ -974,7 +986,48 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 	pl_dbg(chip, PR_PARALLEL,
 		"cp_fcc_ua=%d total_fcc_ua=%d forced_main_fcc=%d\n",
 		cp_fcc_ua, total_fcc_ua, chip->chg_param->forced_main_fcc);
+
+#ifdef CONFIG_LGE_PM
+	if (cp_get_parallel_mode(chip, PARALLEL_OUTPUT_MODE)
+				== POWER_SUPPLY_PL_OUTPUT_VBAT) {
+		if (!chip->cp_master_psy)
+			chip->cp_master_psy =
+				power_supply_get_by_name("charge_pump_master");
+
+		if (chip->cp_master_psy) {
+			power_supply_get_property(chip->cp_master_psy,
+				POWER_SUPPLY_PROP_MIN_ICL, &pval);
+
+			min_cp_lim_ua = get_effective_result_locked(
+				chip->fcc_main_votable);
+			if ((total_fcc_ua - min_cp_lim_ua) < 1000)
+				min_cp_lim_ua = min_fcc_main_ua;
+			min_cp_lim_ua += (pval.intval * 2);
+
+			if (total_fcc_ua < min_cp_lim_ua) {
+				vote(chip->cp_disable_votable, FCC_VOTER, true, 0);
+				vote_override(chip->usb_icl_votable, "CC_MODE_VOTER", false, 0);
+				vote_override(chip->fcc_main_votable, "CC_MODE_VOTER", false, 0);
+			}
+			else if (total_fcc_ua >= min_cp_lim_ua) {
+				if (is_bad_pps_detected()){
+					pr_err("is_bad_operation_pps_ta true. not config cp.");
+					vote_override(chip->usb_icl_votable, "CC_MODE_VOTER", false, 0);
+					vote_override(chip->fcc_main_votable, "CC_MODE_VOTER", false, 0);
+					vote(chip->fcc_main_votable, "BAD_PPS_TA", true, total_fcc_ua);
+				}else{
+					vote(chip->cp_disable_votable, FCC_VOTER,
+							false, 0);
+					cp_configure_ilim(chip, FCC_VOTER,
+						(total_fcc_ua - min_fcc_main_ua) / 2);
+				}
+			}
+		}
+	}
+	else if (cp_fcc_ua > 0) {
+#else
 	if (cp_fcc_ua > 0) {
+#endif
 		if (chip->cp_master_psy) {
 			rc = power_supply_get_property(chip->cp_master_psy,
 					POWER_SUPPLY_PROP_MIN_ICL, &pval);
@@ -1017,8 +1070,22 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 
 	rerun_election(chip->pl_disable_votable);
 	/* When FCC changes, trigger psy changed event for CC mode */
+#ifdef CONFIG_LGE_PM
+	if (chip->cp_master_psy) {
+		if (!chip->batt_psy)
+			chip->batt_psy = power_supply_get_by_name("battery");
+		if (chip->batt_psy) {
+			power_supply_get_property(chip->batt_psy,
+				POWER_SUPPLY_PROP_STATUS_RAW, &pval);
+		}
+		if (unified_bootmode_usermode() ||
+			pval.intval == POWER_SUPPLY_STATUS_CHARGING)
+			power_supply_changed(chip->cp_master_psy);
+	}
+#else
 	if (chip->cp_master_psy)
 		power_supply_changed(chip->cp_master_psy);
+#endif
 
 	return 0;
 }
@@ -1245,7 +1312,11 @@ static int pl_fv_vote_callback(struct votable *votable, void *data,
 	 */
 	if ((chip->float_voltage_uv < fv_uv) && is_batt_available(chip)) {
 		rc = power_supply_get_property(chip->batt_psy,
+#ifdef CONFIG_LGE_PM
+				POWER_SUPPLY_PROP_STATUS_RAW, &pval);
+#else
 				POWER_SUPPLY_PROP_STATUS, &pval);
+#endif
 		if (rc < 0) {
 			pr_err("Couldn't get battery status rc=%d\n", rc);
 		} else {

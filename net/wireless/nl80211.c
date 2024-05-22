@@ -7258,6 +7258,9 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
 	struct wiphy *wiphy;
 	int err, tmp, n_ssids = 0, n_channels, i;
 	size_t ie_len;
+#ifdef CONFIG_LGE_WIRELESS_SCAN_PATCH
+	static int scan_req_fail_cnt = 0;
+#endif /* CONFIG_LGE_WIRELESS_SCAN_PATCH */
 
 	if (!is_valid_ie_attr(info->attrs[NL80211_ATTR_IE]))
 		return -EINVAL;
@@ -7271,9 +7274,29 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
 		return -EOPNOTSUPP;
 
 	if (rdev->scan_req || rdev->scan_msg) {
+#ifdef CONFIG_LGE_WIRELESS_SCAN_PATCH
+		// LGE_PATCH_S - workaround to fix scan issue
+		if (rdev->scan_req) {
+		    printk("nl80211_trigger_scan EBUSY because of scan_req");
+		    scan_req_fail_cnt++;
+		    if (3 <= scan_req_fail_cnt) {
+		        kfree(rdev->scan_req);
+		        rdev->scan_req = NULL;
+		        scan_req_fail_cnt = 0;
+		    }
+		}
+		if (rdev->scan_msg){
+		    printk("nl80211_trigger_scan EBUSY because of scan_msg");
+		}
+		// LGE_PATCH_E - workaround to fix scan issue
+#endif /* CONFIG_LGE_WIRELESS_SCAN_PATCH */
 		err = -EBUSY;
 		goto unlock;
 	}
+#ifdef CONFIG_LGE_WIRELESS_SCAN_PATCH
+	// LGE_PATCH - workaround to fix scan issue
+	scan_req_fail_cnt = 0;
+#endif /* CONFIG_LGE_WIRELESS_SCAN_PATCH */
 
 	if (info->attrs[NL80211_ATTR_SCAN_FREQUENCIES]) {
 		n_channels = validate_scan_freqs(

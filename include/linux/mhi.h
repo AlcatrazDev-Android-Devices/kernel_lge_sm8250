@@ -895,6 +895,12 @@ void mhi_debug_reg_dump(struct mhi_controller *mhi_cntrl);
  */
 char *mhi_get_restart_reason(const char *name);
 
+#ifdef CONFIG_MHI_LGE_PRINT_SFR
+// LGP_MODEMBSP_SFR For SFR display
+void mhi_print_sfr(void);
+// LGP_MODEMBSP_SFR For SFR display
+#endif /* CONFIG_MHI_LGE_PRINT_SFR */
+
 #ifndef CONFIG_ARCH_QCOM
 
 #ifdef CONFIG_MHI_DEBUG

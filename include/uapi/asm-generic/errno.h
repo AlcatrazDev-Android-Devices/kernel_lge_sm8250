@@ -120,4 +120,11 @@
 
 #define EHWPOISON	133	/* Memory page has hardware error */
 
+#ifdef CONFIG_LFS_EXT4
+/* LGE_CHANGE
+ * add ext4 fs errno type for ext4 superblock
+ */
+#define ESUPER      150 /*ext4 superblock is damaged */
+#endif
+
 #endif

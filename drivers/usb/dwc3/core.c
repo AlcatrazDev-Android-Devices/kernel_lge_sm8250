@@ -267,6 +267,15 @@ done:
 	 * we must wait at least 50ms before accessing the PHY domain
 	 * (synchronization delay). DWC_usb31 programming guide section 1.3.2.
 	 */
+#ifdef CONFIG_LGE_USB
+	/*
+	 * Do not delay in usb compliance mode. Otherwise, it may fail at "TD
+	 * 4.7.5 Try. SNK DRP Connect Sink Test" of "USB-C Functional Tests".
+	 */
+	if (!(dwc->usb_compliance_mode &&
+	      *dwc->usb_compliance_mode &&
+	      (dwc->usb2_phy->flags & PHY_HOST_MODE)))
+#endif
 	if (dwc3_is_usb31(dwc))
 		msleep(50);
 

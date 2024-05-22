@@ -41,6 +41,12 @@ struct route_info {
  */
 #define IP6_MAX_MTU (0xFFFF + sizeof(struct ipv6hdr))
 
+#ifdef CONFIG_LGE_DATA_SET_OPERATOR_FOR_IPV6
+/* 2019-10-22 taegil.kim@lge.com LGP_DATA_SET_OPERATOR_FOR_IPV6 [START] */
+extern int sysctl_optr;
+/* 2019-10-22 taegil.kim@lge.com LGP_DATA_SET_OPERATOR_FOR_IPV6 [END] */
+#endif /* CONFIG_LGE_DATA_SET_OPERATOR_FOR_IPV6 */
+
 /*
  * rt6_srcprefs2flags() and rt6_flags2srcprefs() translate
  * between IPV6_ADDR_PREFERENCES socket option values

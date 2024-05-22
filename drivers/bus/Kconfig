@@ -198,6 +198,10 @@ config MHI_DEBUG
 	   throughput as individual MHI packets and state transitions
 	   will be logged.
 
+config MHI_LGE_PRINT_SFR
+	 bool "LGP_MODEMBSP_SFR For SFR display"
+	 depends on MHI_BUS
+
 source "drivers/bus/fsl-mc/Kconfig"
 source "drivers/bus/mhi/controllers/Kconfig"
 source "drivers/bus/mhi/devices/Kconfig"

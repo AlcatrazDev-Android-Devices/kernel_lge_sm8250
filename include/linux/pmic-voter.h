@@ -45,4 +45,7 @@ void destroy_votable(struct votable *votable);
 void lock_votable(struct votable *votable);
 void unlock_votable(struct votable *votable);
 
+#ifdef CONFIG_LGE_PM
+int force_active_set(void *data, u64 val);
+#endif
 #endif /* __PMIC_VOTER_H */

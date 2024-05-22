@@ -73,6 +73,15 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv6.h>
 
+#ifdef CONFIG_LGE_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR
+#include <net/patchcodeid.h>
+/* 2021-03-04 jaewoo1.kim@lge.com LGP_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR [START] */
+// added for vzw
+#define VZW_CARRIER 12
+int sysctl_optr __read_mostly = 0;
+/* 2021-03-04 jaewoo1.kim@lge.com LGP_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR [END] */
+#endif /* CONFIG_LGE_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR */
+
 static u32 ndisc_hash(const void *pkey,
 		      const struct net_device *dev,
 		      __u32 *hash_rnd);
@@ -1338,6 +1347,28 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 	}
 
 skip_defrtr:
+
+#ifdef CONFIG_LGE_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR
+/* 2021-03-04 jaewoo1.kim@lge.com LGP_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR [START] */
+// add for vzw
+	if (sysctl_optr == VZW_CARRIER &&
+            strncmp(skb->dev->name, "rmnet_data", 10) == 0) {
+		patch_code_id("LPCP-1818@y@c@vmlinux@ndisc.c@1");
+		net = dev_net(in6_dev->dev);
+		rt = rt6_get_dflt_router(net, &ipv6_hdr(skb)->saddr, skb->dev);
+		if (in6_dev->cnf.accept_ra_min_hop_limit < 256 &&
+			ra_msg->icmph.icmp6_hop_limit) {
+			if (in6_dev->cnf.accept_ra_min_hop_limit <= ra_msg->icmph.icmp6_hop_limit) {
+				in6_dev->cnf.hop_limit = ra_msg->icmph.icmp6_hop_limit;
+				fib6_metric_set(rt, RTAX_HOPLIMIT,
+						ra_msg->icmph.icmp6_hop_limit);
+			} else {
+				ND_PRINTK(2, warn, "RA: Got route advertisement with lower hop_limit than minimum\n");
+			}
+		}
+	}
+/* 2021-03-04 jaewoo1.kim@lge.com LGP_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR [END] */
+#endif /* CONFIG_LGE_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR */
 
 	/*
 	 *	Update Reachable Time and Retrans Timer

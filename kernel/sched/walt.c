@@ -2776,7 +2776,6 @@ static void _set_preferred_cluster(struct related_thread_group *grp)
 		if (p->ravg.mark_start < wallclock -
 		    (sched_ravg_window * sched_ravg_hist_size))
 			continue;
-
 		combined_demand += p->ravg.coloc_demand;
 		if (!trace_sched_set_preferred_cluster_enabled()) {
 			if (combined_demand > sched_group_upmigrate)

@@ -424,7 +424,7 @@ static void mhi_read_done_work_fn(struct work_struct *work)
 			kfree(tp);
 			if (!buf)
 				break;
-			pr_debug("Read from mhi buf %pK len:%zd\n", buf, len);
+			pr_err("Read from mhi buf %pK len:%zd\n", buf, len);
 			/*
 			 * The read buffers can come after the MHI channels are
 			 * closed. If the channels are closed at the time of
@@ -654,14 +654,14 @@ static ssize_t mhi_uci_read(struct file *file,
 				((drvdata->opened != ENABLE
 				 || !list_empty(&drvdata->read_done_list))));
 		if (ret == -ERESTARTSYS) {
-			pr_debug("Exit signal caught for node\n");
+			pr_err("Exit signal caught for node\n");
 			return -ERESTARTSYS;
 		}
 
 		spin_lock_bh(&drvdata->lock);
 		if (drvdata->opened != ENABLE) {
 			spin_unlock_bh(&drvdata->lock);
-			pr_debug("node was disabled or SSR occurred.\n");
+			pr_err("node was disabled or SSR occurred.\n");
 			ret = -ERESTARTSYS;
 			return ret;
 		}
@@ -822,7 +822,7 @@ static void qdss_mhi_remove(struct mhi_device *mhi_dev)
 	if (!drvdata)
 		return;
 
-	pr_debug("remove dev state: %d\n", mhi_dev->mhi_cntrl->dev_state);
+	pr_err("remove dev state: %d\n", mhi_dev->mhi_cntrl->dev_state);
 
 	dev_state = mhi_dev->mhi_cntrl->dev_state;
 	if (mhi_dev->mhi_cntrl->dev_state != MHI_STATE_RESET)
@@ -884,7 +884,7 @@ static int qdss_mhi_probe(struct mhi_device *mhi_dev,
 	struct device_node *of_node = mhi_dev->dev.of_node;
 	dev_t dev;
 
-	pr_debug("probe dev state: %d chan: %s curr_chan: %d\n",
+	pr_err("probe dev state: %d chan: %s curr_chan: %d\n",
 		  mhi_dev->mhi_cntrl->dev_state,
 		  id->chan,
 		  curr_chan);

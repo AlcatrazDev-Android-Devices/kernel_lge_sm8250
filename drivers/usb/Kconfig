@@ -207,3 +207,5 @@ config USB_ULPI_BUS
 	  be called ulpi.
 
 endif # USB_SUPPORT
+
+source "drivers/usb/Kconfig.lge"

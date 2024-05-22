@@ -1812,6 +1812,10 @@ current_restore_flags(unsigned long orig_flags, unsigned long flags)
 	current->flags |= orig_flags & flags;
 }
 
+#ifdef CONFIG_SCHED_CAS
+extern int schedtune_set_touch_boost(int status);
+#endif /* CONFIG_SCHED_CAS */
+
 extern int cpuset_cpumask_can_shrink(const struct cpumask *cur, const struct cpumask *trial);
 extern int task_can_attach(struct task_struct *p, const struct cpumask *cs_cpus_allowed);
 #ifdef CONFIG_SMP

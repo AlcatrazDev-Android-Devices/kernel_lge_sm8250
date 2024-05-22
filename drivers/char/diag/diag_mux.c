@@ -23,6 +23,10 @@
 #include "diagfwd_peripheral.h"
 #include "diag_ipc_logging.h"
 
+#ifdef CONFIG_LGE_DIAG_BYPASS
+#include "lg_diag_bypass.h"
+#endif
+
 struct diag_mux_state_t *diag_mux;
 static struct diag_logger_t usb_logger;
 static struct diag_logger_t md_logger;
@@ -157,6 +161,11 @@ int diag_mux_write(int proc, unsigned char *buf, int len, int ctx)
 		peripheral = 0;
 	}
 
+#ifdef CONFIG_LGE_DIAG_BYPASS
+	if(diag_bypass_response(buf, len, proc, ctx, logger) > 0) {
+	    return 0;
+	}
+#endif
 	if (MD_PERIPHERAL_MASK(peripheral) & diag_mux->mux_mask[proc]) {
 		logger = diag_mux->md_ptr;
 		log_sink = DIAG_MEMORY_DEVICE_MODE;

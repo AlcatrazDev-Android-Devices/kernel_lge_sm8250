@@ -229,7 +229,11 @@ source "drivers/esoc/Kconfig"
 
 source "drivers/sensors/Kconfig"
 
+source "drivers/tspdrv/Kconfig"
 source "drivers/gpu/msm/Kconfig"
 
 source "drivers/energy_model/Kconfig"
+
+source "drivers/gud/Kconfig"
+
 endmenu

@@ -2,6 +2,9 @@
 config IOMMU_API
 	bool
 
+config LGE_MORE_IOMMU_TRACE
+	bool
+
 menuconfig IOMMU_SUPPORT
 	bool "IOMMU Hardware Support"
 	depends on MMU

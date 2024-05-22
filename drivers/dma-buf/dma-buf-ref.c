@@ -86,6 +86,16 @@ void dma_buf_ref_mod(struct dma_buf *dmabuf, int nr)
  */
 int dma_buf_ref_show(struct seq_file *s, struct dma_buf *dmabuf)
 {
+#ifdef CONFIG_LGE_SUPPRESS_DMA_PRINT
+	struct dma_buf_ref *ref;
+	int count = 0;
+
+	list_for_each_entry(ref, &dmabuf->refs, list) {
+		count += ref->count;
+	}
+
+	seq_printf(s, "Total references: %d\n\n\n", count);
+#else
 	char *buf;
 	struct dma_buf_ref *ref;
 	int count = 0;
@@ -107,6 +117,6 @@ int dma_buf_ref_show(struct seq_file *s, struct dma_buf *dmabuf)
 
 	seq_printf(s, "Total references: %d\n\n\n", count);
 	free_page((unsigned long)buf);
-
+#endif
 	return 0;
 }

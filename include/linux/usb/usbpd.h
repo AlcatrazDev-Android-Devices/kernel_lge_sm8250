@@ -30,6 +30,12 @@ enum usbpd_svdm_cmd_type {
 #define USBPD_SVDM_EXIT_MODE		0x5
 #define USBPD_SVDM_ATTENTION		0x6
 
+#ifdef CONFIG_LGE_USB
+/* DP specific VDM Commands */
+#define DP_USBPD_VDM_STATUS 0x10
+#define DP_USBPD_VDM_CONFIGURE  0x11
+#endif
+
 /*
  * Implemented by client
  */
@@ -44,6 +50,12 @@ struct usbpd_svid_handler {
 	/* DP driver -> PE driver for requesting USB SS lanes */
 	int (*request_usb_ss_lane)(struct usbpd *pd,
 			struct usbpd_svid_handler *hdlr);
+
+#ifdef CONFIG_LGE_USB
+	/* USB driver -> PE driver for requesting USB suspend */
+	int (*request_usb_suspend)(struct usbpd *pd,
+			struct usbpd_svid_handler *hdlr, bool suspend);
+#endif
 
 	/* Unstructured VDM */
 	void (*vdm_received)(struct usbpd_svid_handler *hdlr, u32 vdm_hdr,
@@ -158,5 +170,9 @@ static inline int usbpd_exit_mode(struct usbpd *pd, u16 svid, int mode,
 	return usbpd_send_svdm(pd, svid, USBPD_SVDM_EXIT_MODE,
 			SVDM_CMD_TYPE_INITIATOR, mode, vdo, vdo ? 1 : 0);
 }
+#ifdef CONFIG_LGE_USB_DS_DIRECT_SVID
+struct usbpd_svid_handler *usbpd_find_dp_handler(struct usbpd *pd);
+#endif
+void set_ds3_start(bool hallic_state);
 
 #endif /* __LINUX_USB_USBPD_H */

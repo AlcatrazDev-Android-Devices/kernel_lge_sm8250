@@ -39,6 +39,9 @@
 #include <linux/delayacct.h>
 #include <linux/psi.h>
 #include "internal.h"
+#ifdef CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING
+#include "../fs/sreadahead_prof.h"
+#endif /* CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING */
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/filemap.h>
@@ -2723,6 +2726,17 @@ page_put:
 	} else if (!page) {
 		/* No page in the page cache at all */
 		count_vm_event(PGMAJFAULT);
+#ifdef CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING
+		/* LGE_CHANGE_S
+		*
+		* Profile files related to pgmajfault during 1st booting
+		* in order to use the data as readahead args
+		*
+		* matia.kim@lge.com 20130612
+		*/
+		sreadahead_prof(file, 0, 0);
+		/* LGE_CHANGE_E */
+#endif /* CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING */
 		count_memcg_event_mm(vmf->vma->vm_mm, PGMAJFAULT);
 		ret = VM_FAULT_MAJOR;
 		fpin = do_sync_mmap_readahead(vmf);

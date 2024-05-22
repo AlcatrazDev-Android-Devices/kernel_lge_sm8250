@@ -364,6 +364,10 @@ extern int fat_free_clusters(struct inode *inode, int cluster);
 extern int fat_count_free_clusters(struct super_block *sb);
 extern int fat_trim_fs(struct inode *inode, struct fstrim_range *range);
 
+#ifdef CONFIG_LFS_FAT_FIX_BAD_FORMAT
+extern int fat_ent_update_badclusters_after(struct super_block *sb, int entry);
+#endif
+
 /* fat/file.c */
 extern long fat_generic_ioctl(struct file *filp, unsigned int cmd,
 			      unsigned long arg);

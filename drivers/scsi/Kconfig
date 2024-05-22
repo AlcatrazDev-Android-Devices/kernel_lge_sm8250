@@ -1486,4 +1486,7 @@ source "drivers/scsi/device_handler/Kconfig"
 
 source "drivers/scsi/osd/Kconfig"
 
+# LGE_S
+source "drivers/scsi/Kconfig.lfs"
+
 endmenu
