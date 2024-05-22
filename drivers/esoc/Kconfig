@@ -70,4 +70,7 @@ config MDM_DBG_REQ_ENG
 	  the external modem. Allows for debugging of IPC mechanism
 	  between the external modem and the primary soc.
 
+config LGE_ESOC_LOG_CONTROL
+	bool "LGE eSoC log control"
+
 endif

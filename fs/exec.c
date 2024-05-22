@@ -71,6 +71,8 @@
 #include "internal.h"
 
 #include <trace/events/sched.h>
+
+#ifdef CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING
 /* LGE_CHANGE_S
  *
  * do read/mmap profiling during booting
@@ -80,6 +82,7 @@
  */
 #include "sreadahead_prof.h"
 /* LGE_CHAGE_E */
+#endif /* CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING */
 
 int suid_dumpable = 0;
 
@@ -157,6 +160,8 @@ SYSCALL_DEFINE1(uselib, const char __user *, library)
 		goto exit;
 
 	fsnotify_open(file);
+
+#ifdef CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING
 /* LGE_CHANGE_S
  *
  * do read/mmap profiling during booting
@@ -166,6 +171,7 @@ SYSCALL_DEFINE1(uselib, const char __user *, library)
  */
 	sreadahead_prof(file, 0, 0);
 /* LGE_CHANGE_E */
+#endif /* CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING */
 
 	error = -ENOEXEC;
 
@@ -879,6 +885,7 @@ static struct file *do_open_execat(int fd, struct filename *name, int flags)
 	if (path_noexec(&file->f_path))
 		goto exit;
 
+#ifdef CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING
 /* LGE_CHANGE_S
  *
  * do read/mmap profiling during booting
@@ -888,6 +895,7 @@ static struct file *do_open_execat(int fd, struct filename *name, int flags)
  */
 	sreadahead_prof(file, 0, 0);
 /* LGE_CHANGE_E */
+#endif /* CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING */
 
 	err = deny_write_access(file);
 	if (err)

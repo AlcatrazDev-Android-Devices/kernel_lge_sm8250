@@ -828,3 +828,6 @@ config TCP_MD5SIG
 	  on the Internet.
 
 	  If unsure, say N.
+
+config LGE_UDP_RCV_BUF_COUNT_PATCH
+	bool "Use LGE udp receive buffer counting method"

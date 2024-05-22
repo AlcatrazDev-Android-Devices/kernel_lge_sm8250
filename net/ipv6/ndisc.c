@@ -73,12 +73,14 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv6.h>
 
+#ifdef CONFIG_LGE_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR
 #include <net/patchcodeid.h>
 /* 2021-03-04 jaewoo1.kim@lge.com LGP_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR [START] */
 // added for vzw
 #define VZW_CARRIER 12
 int sysctl_optr __read_mostly = 0;
 /* 2021-03-04 jaewoo1.kim@lge.com LGP_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR [END] */
+#endif /* CONFIG_LGE_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR */
 
 static u32 ndisc_hash(const void *pkey,
 		      const struct net_device *dev,
@@ -1346,6 +1348,7 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 
 skip_defrtr:
 
+#ifdef CONFIG_LGE_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR
 /* 2021-03-04 jaewoo1.kim@lge.com LGP_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR [START] */
 // add for vzw
 	if (sysctl_optr == VZW_CARRIER &&
@@ -1365,6 +1368,7 @@ skip_defrtr:
 		}
 	}
 /* 2021-03-04 jaewoo1.kim@lge.com LGP_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR [END] */
+#endif /* CONFIG_LGE_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR */
 
 	/*
 	 *	Update Reachable Time and Retrans Timer

@@ -986,3 +986,9 @@ config ICNSS_QMI
 
 source "drivers/soc/qcom/lge/Kconfig"
 source "drivers/soc/qcom/wcnss/Kconfig"
+
+config LGE_LOG_FOR_UL_STALL
+	bool "LGE log for qmi UL stall"
+
+config LGE_FORCE_SSR_ON_CHARGE_LOGO
+	bool "LGE force subsystem restart on chargelogo boot mode"

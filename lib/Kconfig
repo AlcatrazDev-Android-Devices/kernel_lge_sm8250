@@ -639,3 +639,6 @@ config GENERIC_LIB_CMPDI2
 
 config GENERIC_LIB_UCMPDI2
 	bool
+
+config LGE_REPORT_ONCE
+	bool "LGE report only once for BUG"

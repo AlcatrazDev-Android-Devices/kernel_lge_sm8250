@@ -22,6 +22,7 @@
 
 extern void *ipc_log;
 
+#ifdef CONFIG_LGE_ESOC_LOG_CONTROL
 // LGE_ModemBSP_S, [DEBUG] Print esoc-mdm log from ipc log to kernel log
 #define esoc_mdm_log(__msg, ...) \
 do { \
@@ -30,14 +31,14 @@ do { \
 		ipc_log_string(ipc_log, \
 			"[%s]: "__msg, __func__, ##__VA_ARGS__); \
 } while (0)
-/*
+// LGE_ModemBSP_E, [DEBUG]
+#else
 do { \
 	if (ipc_log) \
 		ipc_log_string(ipc_log, \
 			"[%s]: "__msg, __func__, ##__VA_ARGS__); \
 } while (0)
-*/
-// LGE_ModemBSP_E, [DEBUG]
+#endif /* CONFIG_LGE_ESOC_LOG_CONTROL */
 
 #define ESOC_DEV_MAX		4
 #define ESOC_NAME_LEN		20

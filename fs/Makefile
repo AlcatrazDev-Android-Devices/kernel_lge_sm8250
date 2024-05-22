@@ -20,7 +20,7 @@ obj-y :=	open.o read_write.o file_table.o super.o \
 # in order to use the data as readahead args
 #
 # byungchul.park@lge.com 20120503
-obj-y += sreadahead_prof.o
+obj-$(CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING) += sreadahead_prof.o
 # LGE_CHANGE_E
 
 ifeq ($(CONFIG_BLOCK),y)

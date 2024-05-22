@@ -275,6 +275,7 @@ static int format_corename(struct core_name *cn, struct coredump_params *cprm)
 				break;
 			/* executable */
 			case 'e': {
+#ifdef CONFIG_LGE_COREDUMP_FORMAT
 				char task_name[TASK_COMM_LEN +1] = {0, };
 				char *p = NULL;
 				strncpy(task_name, current->comm, TASK_COMM_LEN);
@@ -282,6 +283,9 @@ static int format_corename(struct core_name *cn, struct coredump_params *cprm)
 					*p = '_';
 				}
 				err = cn_esc_printf(cn, "%s", task_name);
+#else
+				err = cn_esc_printf(cn, "%s", current->comm);
+#endif /* CONFIG_LGE_COREDUMP_FORMAT */
 				break;
 			}
 			case 'E':

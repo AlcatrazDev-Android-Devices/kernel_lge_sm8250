@@ -1619,7 +1619,9 @@ static void android_work(struct work_struct *data)
 	bool status[3] = { false, false, false };
 	unsigned long flags;
 	bool uevent_sent = false;
+#if defined(CONFIG_LGE_USB_EMBEDDED_BATTERY) && defined(CONFIG_LGE_PM_VENEER_PSY)
 	ktime_t diff;
+#endif
 
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (cdev->config)

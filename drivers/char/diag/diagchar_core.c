@@ -824,8 +824,12 @@ struct diag_cmd_reg_entry_t *diag_cmd_search(
 						item->proc != APPS_DATA) {
 						continue;
 					}
+#ifdef CONFIG_LGE_DIAG_BYPASS
 					if ((entry->subsys_id != RESET_ID &&
 						entry->subsys_id != OFFLINED_ID) &&
+#else
+					if (entry->subsys_id != RESET_ID &&
+#endif
 						item->proc == APPS_DATA) {
 						continue;
 					}

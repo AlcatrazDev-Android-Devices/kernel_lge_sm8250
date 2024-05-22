@@ -423,8 +423,8 @@ static int mdm_handle_boot_fail(struct esoc_clink *esoc_clink, u8 *pon_trial)
 		break;
 	case BOOT_FAIL_ACTION_PANIC:
 		esoc_mdm_log("Calling panic!!\n");
-		msleep(20000);
 #ifdef CONFIG_LGE_HANDLE_PANIC
+		msleep(20000);
 		lge_set_subsys_crash_reason("esoc0", LGE_ERR_SUB_PWR);
 #endif
 		panic("Panic requested on external modem boot failure\n");
