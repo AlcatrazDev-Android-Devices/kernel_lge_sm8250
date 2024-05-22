@@ -427,6 +427,11 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 	else
 		cpufreq_update_policy(cpufreq_cdev->policy->cpu);
 
+#ifdef CONFIG_LGE_PM_DEBUG
+	pr_info_ratelimited("%s: cdev[%s] set frequency=%lu, state=%d\n",
+		__func__, cdev->type, clip_freq, state);
+#endif
+
 	return 0;
 }
 

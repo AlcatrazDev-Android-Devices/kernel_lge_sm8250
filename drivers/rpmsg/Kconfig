@@ -86,4 +86,7 @@ config MSM_RPM_SMD
 	  the MSM_MPM config that programs the MPM module to monitor interrupts
 	  during sleep modes.
 
+config RPMSG_QCOM_GLINK_DEBUG
+	tristate "Qualcomm RPMSG GLINK debug"
+
 endmenu

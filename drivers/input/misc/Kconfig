@@ -885,4 +885,23 @@ config INPUT_SC27XX_VIBRA
 	  To compile this driver as a module, choose M here. The module will
 	  be called sc27xx_vibra.
 
+config LGE_USE_SAR_CONTROLLER
+	bool "Sar controller device"
+	help
+	  Support Sar Controller for this model.
+
+config SAR_ATMF04_12QFN
+	bool "ATMF04_12QFN support"
+	depends on I2C
+	help
+	  Support ATMF04_12QFN as an input device.
+
+config SAR_ALMF04_C2_C3_12QFN
+	bool "SAR_ALMF04_C2_C3_12QFN support"
+	depends on I2C
+	help
+	  Support ATMF04_12QFN as an input device.
+
 endif
+
+source "drivers/input/misc/tcs3407/Kconfig"

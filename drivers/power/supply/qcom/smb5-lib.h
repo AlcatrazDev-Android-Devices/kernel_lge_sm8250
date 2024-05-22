@@ -16,6 +16,13 @@
 #include <linux/extcon-provider.h>
 #include <linux/usb/typec.h>
 #include "storm-watch.h"
+#if defined(CONFIG_LGE_USB_MOISTURE_DETECTION) \
+	&& defined(CONFIG_LGE_USB_SBU_SWITCH)
+#include <linux/usb/lge_sbu_switch.h>
+#endif
+#ifdef CONFIG_LGE_DUAL_SCREEN
+#include <linux/lge_ds3.h>
+#endif
 #include "battery.h"
 
 enum print_reason {
@@ -104,6 +111,17 @@ enum print_reason {
 #define DCIN_ICL_MAX_UA			1500000
 #define DCIN_ICL_STEP_UA		100000
 #define ROLE_REVERSAL_DELAY_MS		500
+#ifdef CONFIG_LGE_USB_MOISTURE_DETECTION
+#define RSBU_K_300K_UV			3000000
+#define RSBU_K_175K_UV			1750000 // 200k ohm
+#define RSBU_K_15K_UV			150000
+#define RSBU_K_50K_UV			500000
+#define RSBU_K_200_UV			2000
+#endif
+
+#ifdef CONFIG_LGE_PM
+struct ext_smb_charger;
+#endif
 
 enum smb_mode {
 	PARALLEL_MASTER = 0,
@@ -296,6 +314,10 @@ enum icl_override_mode {
 	SW_OVERRIDE_USB51_MODE,
 	/* ICL other than USB51 */
 	SW_OVERRIDE_HC_MODE,
+#ifdef CONFIG_LGE_PM
+	/* Factory mode */
+	SW_FACTORY_MODE,
+#endif
 };
 
 /* EXTCON_USB and EXTCON_USB_HOST are mutually exclusive */
@@ -382,12 +404,24 @@ struct smb_charger {
 	struct smb_iio		iio;
 	int			*debug_mask;
 	int			pd_disabled;
+#ifdef CONFIG_LGE_USB_MOISTURE_DETECTION
+	int			*lge_lpd_disabled;
+	int			*lpd_ux;
+	int			*lpd_dpdm_disable;
+	int			*lpd_apsd_disable;
+	int			*lpd_threshold;
+	int			*lpd_floating;
+	int			*check_factory_lpd;
+#endif
 	enum smb_mode		mode;
 	struct smb_chg_freq	chg_freq;
 	int			otg_delay_ms;
 	int			weak_chg_icl_ua;
 	u32			sdam_base;
 	bool			pd_not_supported;
+#ifdef CONFIG_LGE_USB_MOISTURE_DETECTION
+	bool			cc_or_sbu_ov;
+#endif
 
 	/* locks */
 	struct mutex		smb_lock;
@@ -455,6 +489,9 @@ struct smb_charger {
 	struct work_struct	pl_update_work;
 	struct work_struct	jeita_update_work;
 	struct work_struct	moisture_protection_work;
+#ifdef CONFIG_LGE_USB_MOISTURE_DETECTION
+	struct work_struct	lpd_recheck_work;
+#endif
 	struct work_struct	chg_termination_work;
 	struct work_struct	dcin_aicl_work;
 	struct work_struct	cp_status_change_work;
@@ -471,7 +508,9 @@ struct smb_charger {
 	struct delayed_work	pr_swap_detach_work;
 	struct delayed_work	pr_lock_clear_work;
 	struct delayed_work	role_reversal_check;
-
+#ifdef CONFIG_LGE_USB_MOISTURE_DETECTION
+	struct delayed_work	sbu_ovp_work;
+#endif
 	struct alarm		lpd_recheck_timer;
 	struct alarm		moisture_protection_alarm;
 	struct alarm		chg_termination_alarm;
@@ -617,6 +656,15 @@ struct smb_charger {
 	int			dcin_uv_count;
 	ktime_t			dcin_uv_last_time;
 	int			last_wls_vout;
+#if defined(CONFIG_LGE_USB_MOISTURE_DETECTION) \
+	&& defined(CONFIG_LGE_USB_SBU_SWITCH)
+	struct lge_sbu_switch_desc	sbu_desc;
+	struct lge_sbu_switch_instance	*sbu_inst;
+#endif
+#ifdef CONFIG_LGE_PM
+	struct votable		*dc_icl_votable;
+	struct ext_smb_charger *ext_chg;
+#endif
 };
 
 int smblib_read(struct smb_charger *chg, u16 addr, u8 *val);
@@ -829,6 +877,13 @@ int smblib_configure_hvdcp_apsd(struct smb_charger *chg, bool enable);
 int smblib_icl_override(struct smb_charger *chg, enum icl_override_mode mode);
 enum alarmtimer_restart smblib_lpd_recheck_timer(struct alarm *alarm,
 				ktime_t time);
+#ifdef CONFIG_LGE_USB_MOISTURE_DETECTION
+int smblib_set_prop_moisture_detected(struct smb_charger *chg,
+				const union power_supply_propval *val);
+enum alarmtimer_restart smblib_lpd_recheck_timer_override(struct alarm *alarm,
+				ktime_t time);
+void smblib_lpd_recheck_timer_work(struct work_struct *w);
+#endif
 int smblib_toggle_smb_en(struct smb_charger *chg, int toggle);
 void smblib_hvdcp_detect_enable(struct smb_charger *chg, bool enable);
 void smblib_hvdcp_hw_inov_enable(struct smb_charger *chg, bool enable);
@@ -841,4 +896,9 @@ int smblib_get_qc3_main_icl_offset(struct smb_charger *chg, int *offset_ua);
 
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);
+
+#ifdef CONFIG_LGE_PM
+#include "../lge/extension-lib.h"
+#endif
+
 #endif /* __SMB5_CHARGER_H */

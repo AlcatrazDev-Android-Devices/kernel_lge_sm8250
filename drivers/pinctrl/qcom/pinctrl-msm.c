@@ -511,6 +511,10 @@ static void msm_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 #ifdef CONFIG_DEBUG_FS
 #include <linux/seq_file.h>
 
+#ifdef CONFIG_LGE_PM
+extern bool msm_gpio_check_access(int gpio);
+#endif
+
 static void msm_gpio_dbg_show_one(struct seq_file *s,
 				  struct pinctrl_dev *pctldev,
 				  struct gpio_chip *chip,
@@ -571,8 +575,14 @@ static void msm_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 	unsigned gpio = chip->base;
 	unsigned i;
 
+#ifdef CONFIG_LGE_PM
+	for (i = 0; i < chip->ngpio; i++, gpio++)
+		if(msm_gpio_check_access(gpio) == true)
+			msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
+#else
 	for (i = 0; i < chip->ngpio; i++, gpio++)
 		msm_gpio_dbg_show_one(s, NULL, chip, i, gpio);
+#endif
 }
 
 #else

@@ -4,6 +4,51 @@
 
 #include <linux/types.h>
 
+#if defined(CONFIG_LGE_DUAL_SCREEN)
+#include <linux/usb/usbpd.h>
+
+enum dd_fw_update {
+	DD_MCU_CANCEL			= 0,
+	DD_MCU_FORCE_UPDATE	= 1,
+	DD_MCU_UPDATE			= 2,
+	DD_TOUCH_UPDATE		= 3,
+	DD_TOUCH_MCU_UPDATE	= 4,
+	DD_UPDATE_CLEAR		= 5,
+	DD_MCU_RECOVERY		= 6
+};
+
+enum mcu_fw_update_status {
+	MCU_FW_UPDATE_NOT_INITIALIZED      = -1,
+	MCU_FW_UPDATE_READY_VERSION_CHECK  = 0,
+	MCU_FW_UPDATE_FORCE                = 1,
+	MCU_FW_UPDATE_NEED                 = 2,
+	MCU_FW_UPDATE_NO_NEED              = 3,
+	MCU_FW_UPDATE_READY_USER_CONFIRM   = 4,
+	MCU_FW_UPDATE_USER_CONFIRM         = 5,
+	MCU_FW_UPDATE_START                = 6,
+};
+
+enum coverfw_status {
+	UPDATE_NO_NEED		= 0,
+	UPDATE_NEED		= 1,
+	UPDATE_DONE		= 2,
+	RECOVERY_NEED		= 6,
+};
+
+enum mcu_status {
+	MCU_NOT_INITIALIZED  = -1,
+	MCU_5V_LOW           = 0,
+	MCU_5V_HIGH          = 1,
+	MCU_START_BOOTLOADER = 2,
+	MCU_START_SYSTEM     = 3,
+};
+
+enum {
+	OLD_TIANMA_ID = 1,
+	NEW_TIANMA_ID = 2,
+	TOVIS_ID = 3,
+};
+#endif
 struct device;
 
 /**

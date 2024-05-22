@@ -223,6 +223,12 @@ extern bool vgacon_text_force(void);
 static inline bool vgacon_text_force(void) { return false; }
 #endif
 
+#ifdef CONFIG_MACH_LGE
+extern void console_uart_enable(void);
+extern void console_uart_disable(void);
+extern int console_uart_status(void);
+#endif
+
 extern void console_init(void);
 
 /* For deferred console takeover */

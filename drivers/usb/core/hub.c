@@ -2038,6 +2038,13 @@ void usb_set_device_state(struct usb_device *udev,
 	unsigned long flags;
 	int wakeup = -1;
 
+#ifdef CONFIG_LGE_USB
+	if(!udev) {
+		pr_err("[BSP-USB] Failed to get udev\n");
+		return;
+	}
+#endif
+
 	spin_lock_irqsave(&device_state_lock, flags);
 	if (udev->state == USB_STATE_NOTATTACHED)
 		;	/* do nothing */
@@ -5226,6 +5233,10 @@ loop:
 			usb_hub_set_port_power(hdev, hub, port1, true);
 			msleep(hub_power_on_good_delay(hub));
 		}
+#ifdef CONFIG_LGE_USB
+		if (status == -ESHUTDOWN)
+			goto done;
+#endif
 	}
 	if (hub->hdev->parent ||
 			!hcd->driver->port_handed_over ||

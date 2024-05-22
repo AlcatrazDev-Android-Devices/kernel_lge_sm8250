@@ -29,6 +29,10 @@
 #include <linux/pm_opp.h>
 #include <linux/regulator/consumer.h>
 
+#ifdef CONFIG_PROC_FS
+#include <linux/proc_fs.h>
+#endif
+
 #include "clk.h"
 
 static DEFINE_SPINLOCK(enable_lock);
@@ -100,7 +104,7 @@ struct clk_core {
 	struct hlist_node	child_node;
 	struct hlist_head	clks;
 	unsigned int		notifier_count;
-#ifdef CONFIG_DEBUG_FS
+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_PROC_FS)
 	struct dentry		*dentry;
 	struct hlist_node	debug_node;
 #endif
@@ -3252,7 +3256,7 @@ int clk_set_flags(struct clk *clk, unsigned long flags)
 }
 EXPORT_SYMBOL_GPL(clk_set_flags);
 
-#ifdef CONFIG_DEBUG_FS
+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_PROC_FS)
 #include <linux/debugfs.h>
 
 static struct dentry *rootdir;
@@ -3973,6 +3977,22 @@ static void clk_debug_unregister(struct clk_core *core)
 	mutex_unlock(&clk_debug_lock);
 }
 
+#ifdef CONFIG_LGE_PM_DEBUG
+/*
+ * Print the names of all enabled clocks and their parents if
+ * debug_suspend is set from debugfs.
+ *
+ */
+void clock_debug_print_enabled(bool print_parent)
+{
+/*
+	if (likely(!debug_suspend))
+		return;
+*/
+	if (print_parent)
+		clock_debug_print_enabled_clocks(NULL);
+}
+#else
 /*
  * Print the names of all enabled clocks and their parents if
  * debug_suspend is set from debugfs.
@@ -3984,6 +4004,7 @@ void clock_debug_print_enabled(void)
 
 	clock_debug_print_enabled_clocks(NULL);
 }
+#endif
 EXPORT_SYMBOL_GPL(clock_debug_print_enabled);
 
 /**

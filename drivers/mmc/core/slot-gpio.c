@@ -32,6 +32,26 @@ struct mmc_gpio {
 	char cd_label[];
 };
 
+#ifdef CONFIG_LFS_MMC
+extern unsigned int is_damaged_sd;
+static int old_gpio = -1;
+#endif
+
+#ifdef CONFIG_LFS_MMC_TRAY_EVENT //support the TRAY uevent
+static int send_sd_slot_tray_state (struct mmc_host *host, int state) {
+	char event_string[20]; /* check the event string length */
+	char *envp[2] = { event_string, NULL };
+
+	if (state)
+		sprintf(event_string, "TRAY_STATE=INSERTED");
+	else
+		sprintf(event_string, "TRAY_STATE=EJECTED");
+
+	pr_info("%s: %s", __func__, envp[0]);
+	return kobject_uevent_env(&host->class_dev.kobj, KOBJ_CHANGE, envp);
+}
+#endif
+
 static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 {
 	/* Schedule a card detection after a debounce timeout */
@@ -43,7 +63,34 @@ static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 		mmc_hostname(host), present, present?"INSERT":"REMOVAL");
 
 	host->trigger_card_event = true;
+
+#ifdef CONFIG_LFS_MMC
+	/* LGE_CHANGE, BSP-FS
+	 * Insertion log of slot detection
+	*/
+	if(mmc_card_is_removable(host))
+		is_damaged_sd = 0;
+
+	pr_info("[LGE][MMC] %s: slot status change detected(%s), GPIO_ACTIVE_%s\n",
+		mmc_hostname(host), present ?
+		"INSERTED" : "EJECTED",
+		(host->caps2 & MMC_CAP2_CD_ACTIVE_HIGH) ?
+		"HIGH" : "LOW");
+#endif
+
+#ifdef CONFIG_LFS_MMC
+	pr_info("[LGE][MMC] %s: present = %d old_gpio = %d \n", mmc_hostname(host), present, old_gpio);
+	if(old_gpio == present)
+		return IRQ_HANDLED;
+	old_gpio = present;
+#endif
+
 	mmc_detect_change(host, msecs_to_jiffies(ctx->cd_debounce_delay_ms));
+
+#ifdef CONFIG_LFS_MMC_TRAY_EVENT //support the TRAY uevent
+	if (send_sd_slot_tray_state(host, old_gpio) < 0)
+		pr_err("%s: send_sd_slot_tray_state was failed.\n", __func__);
+#endif
 
 	return IRQ_HANDLED;
 }
@@ -167,6 +214,11 @@ void mmc_gpiod_request_cd_irq(struct mmc_host *host)
 			ctx->cd_label, host);
 		if (ret < 0)
 			irq = ret;
+#ifdef CONFIG_LFS_MMC_TRAY_EVENT //support the TRAY uevent
+		pr_debug("update initial TRAY status\n");
+		if (send_sd_slot_tray_state(host, mmc_gpio_get_cd(host)) < 0)
+			pr_err("%s: send_sd_slot_tray_state was failed.\n", __func__);
+#endif
 	}
 
 	host->slot.cd_irq = irq;
@@ -180,14 +232,65 @@ void mmc_gpiod_request_cd_irq(struct mmc_host *host)
 }
 EXPORT_SYMBOL(mmc_gpiod_request_cd_irq);
 
+#ifdef CONFIG_LFS_MMC_TRAY_EVENT
+static void work_tray_uevent_fn(struct work_struct *work)
+{
+	struct mmc_host *host = container_of(work, struct mmc_host, tray_work);
+
+	if (send_sd_slot_tray_state(host, mmc_gpio_get_cd(host)) < 0)
+		pr_err("%s: send_sd_slot_tray_state was failed.\n", __func__);
+}
+
+static void send_tray_uevent(struct mmc_host *host)
+{
+	bool ret;
+	if (!host)
+		return;
+
+	ret = schedule_work(&host->tray_work);
+	if (!ret)
+		pr_err("[tray_uevent] work_tray_uevent is already in queue.\n");
+}
+#endif
+
 static int mmc_card_detect_notifier(struct notifier_block *nb,
 				       unsigned long event, void *ptr)
 {
 	struct mmc_host *host = container_of(nb, struct mmc_host,
 					     card_detect_nb);
 
+#ifdef CONFIG_LFS_MMC
+	int present = host->ops->get_cd(host);
+#endif
+
 	host->trigger_card_event = true;
+
+#ifdef CONFIG_LFS_MMC
+	/* LGE_CHANGE, BSP-FS
+	 * Insertion log of slot detection
+	*/
+	if(mmc_card_is_removable(host))
+		is_damaged_sd = 0;
+
+	pr_info("[LGE][MMC] %s: mmc_card_detect_notifier(%s), GPIO_ACTIVE_%s\n",
+		mmc_hostname(host), present ?
+		"INSERTED" : "EJECTED",
+		(host->caps2 & MMC_CAP2_CD_ACTIVE_HIGH) ?
+		"HIGH" : "LOW");
+#endif
+
+#ifdef CONFIG_LFS_MMC
+	pr_info("[LGE][MMC] %s: mmc_gpio_get_cd = %d old_gpio = %d \n", mmc_hostname(host), present, old_gpio);
+	if(old_gpio == present)
+		return NOTIFY_DONE;
+	old_gpio = present;
+#endif
+
 	mmc_detect_change(host, 0);
+
+#ifdef CONFIG_LFS_MMC_TRAY_EVENT //support the TRAY uevent
+	send_tray_uevent(host);
+#endif
 
 	return NOTIFY_DONE;
 }
@@ -208,6 +311,14 @@ void mmc_register_extcon(struct mmc_host *host)
 			__func__, err);
 		host->caps |= MMC_CAP_NEEDS_POLL;
 	}
+
+#ifdef CONFIG_LFS_MMC_TRAY_EVENT //support the TRAY uevent
+	INIT_WORK(&host->tray_work, work_tray_uevent_fn);
+
+	pr_info("update initial TRAY status\n");
+	send_tray_uevent(host);
+#endif
+
 }
 EXPORT_SYMBOL(mmc_register_extcon);
 
@@ -248,6 +359,7 @@ int mmc_gpio_set_cd_wake(struct mmc_host *host, bool on)
 	return ret;
 }
 EXPORT_SYMBOL(mmc_gpio_set_cd_wake);
+
 
 /* Register an alternate interrupt service routine for
  * the card-detect GPIO.

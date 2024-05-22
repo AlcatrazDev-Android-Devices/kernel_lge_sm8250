@@ -17,6 +17,11 @@
 #include <linux/msm_ext_display.h>
 #include <linux/extcon-provider.h>
 
+#ifdef pr_debug
+#undef pr_debug
+#define pr_debug pr_err
+#endif
+
 struct msm_ext_disp_list {
 	struct msm_ext_disp_init_data *data;
 	struct list_head list;

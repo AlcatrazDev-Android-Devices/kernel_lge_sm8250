@@ -828,6 +828,13 @@ void __noreturn do_exit(long code)
 	struct task_struct *tsk = current;
 	int group_dead;
 
+#ifdef CONFIG_MACH_LGE
+	if(task_pid_nr(current)==1) {
+		panic("current pid is init!!!  exitcode=0x%08x\n",
+				tsk->signal->group_exit_code ?: tsk->exit_code);
+	}
+#endif
+
 	/*
 	 * We can get here from a kernel oops, sometimes with preemption off.
 	 * Start by checking for critical errors.

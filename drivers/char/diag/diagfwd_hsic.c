@@ -317,6 +317,7 @@ static struct platform_driver msm_hsic_ch_driver = {
 	.remove = diag_hsic_remove,
 	.driver = {
 		   .name = "diag_bridge",
+		   .owner = THIS_MODULE,
 		   .pm   = &diagfwd_hsic_dev_pm_ops,
 		   },
 };

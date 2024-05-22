@@ -118,6 +118,15 @@ static inline struct timespec64 tk_xtime(const struct timekeeper *tk)
 	return ts;
 }
 
+#ifdef CONFIG_MACH_LGE
+struct timespec __current_kernel_time(void)
+{
+	struct timekeeper *tk = &tk_core.timekeeper;
+
+	return timespec64_to_timespec(tk_xtime(tk));
+}
+#endif
+
 static void tk_set_xtime(struct timekeeper *tk, const struct timespec64 *ts)
 {
 	tk->xtime_sec = ts->tv_sec;

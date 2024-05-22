@@ -550,7 +550,7 @@ int synx_release(s32 synx_obj)
 
 	fence = row->fence;
 	rc = synx_release_core(row);
-	synx_release_handle(row);
+    synx_release_handle(row);
 	return rc;
 }
 
@@ -1600,8 +1600,8 @@ int synx_initialize(struct synx_initialization_params *params)
 
 	mutex_lock(&synx_dev->table_lock);
 	synx_dev->open_cnt++;
-	/* zero handle not allowed */
-	set_bit(0, synx_dev->bitmap);
+    /* zero handle not allowed */
+    set_bit(0, synx_dev->bitmap);	
 	mutex_unlock(&synx_dev->table_lock);
 
 	if (params)

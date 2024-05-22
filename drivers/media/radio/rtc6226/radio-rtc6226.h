@@ -51,11 +51,8 @@
 
 #define RW_Kernel_ENG
 
-#define DEBUG
-#undef FMDBG
-#define FMDBG(fmt, args...) pr_debug("rtc6226: " fmt, ##args)
+#define FMDBG(fmt, args...) pr_info("rtc6226: " fmt, ##args)
 
-#undef FMDERR
 #define FMDERR(fmt, args...) pr_err("rtc6226: " fmt, ##args)
 
 /* driver definitions */
@@ -119,6 +116,8 @@
 #define BANKCFG                     8       /* Bank Serlection */
 
 #define SEEKCFG2                    9       /* Seek Configuration 2 */
+#define SEEKCFG2_CSR0_NOISETH       0xc000  /* [15:14] DC offset fail TH */
+#define SEEKCFG2_CSR0_SPIKETH       0x3000  /* [13:12] Spike fail TH */
 
 #define STATUS                      10      /* Status and Work channel */
 #define STATUS_RDS_RDY              0x8000  /* [15:15] RDS Ready */
@@ -570,6 +569,8 @@ enum search_t {
 	SCAN,
 	SCAN_FOR_STRONG,
 };
+
+#define INDEX_108MHZ 10800
 
 /**************************************************************************
  * Frequency Multiplicator

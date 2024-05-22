@@ -717,6 +717,14 @@ struct Scsi_Host {
 	 */
 	struct device *dma_dev;
 
+#ifdef CONFIG_LFS_SCSI_USB_HOST_NOTIFY
+	unsigned int  by_usb;
+#endif
+
+#ifdef CONFIG_LFS_SCSI_DEVICE_IDENTIFIER
+	unsigned int  by_ufs;
+#endif
+
 	/*
 	 * We should ensure that this is aligned, both for better performance
 	 * and also because some compilers (m68k) don't automatically force

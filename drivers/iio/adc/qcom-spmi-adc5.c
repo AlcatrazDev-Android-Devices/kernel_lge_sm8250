@@ -923,6 +923,10 @@ static const struct adc_channels adc_chans_pmic5[ADC_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_PM5_SMB_TEMP)
 	[ADC_AMUX_THM3]			= ADC_CHAN_TEMP("amux_thm3", 1,
 					SCALE_HW_CALIB_PM5_SMB_TEMP)
+#ifdef CONFIG_LGE_PM
+	[ADC_AMUX_THM2_PU3]	= ADC_CHAN_VOLT("usb_id", 1,
+					SCALE_HW_CALIB_DEFAULT)
+#endif
 	[ADC_GPIO1_PU2]	= ADC_CHAN_TEMP("gpio1_pu2", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 	[ADC_GPIO2_PU2]	= ADC_CHAN_TEMP("gpio2_pu2", 1,
@@ -931,6 +935,10 @@ static const struct adc_channels adc_chans_pmic5[ADC_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 	[ADC_GPIO4_PU2]	= ADC_CHAN_TEMP("gpio4_pu2", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
+#ifdef CONFIG_LGE_DUAL_SCREEN
+	[ADC_GPIO4_PU3] = ADC_CHAN_VOLT("gpio4_pu3", 1,
+					SCALE_HW_CALIB_DEFAULT)
+#endif
 };
 
 static const struct adc_channels adc7_chans_pmic[ADC_MAX_CHANNEL] = {

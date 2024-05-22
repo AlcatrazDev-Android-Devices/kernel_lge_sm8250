@@ -1089,6 +1089,15 @@ int psi_show(struct seq_file *m, struct psi_group *group, enum psi_res res)
 			   total);
 	}
 
+	/* if PSI_MEM, show the trigger condition */
+	if (res == PSI_MEM) {
+		struct psi_trigger *trigger;
+		seq_printf(m, "\n=== psi trigger setting ===\n");
+
+		list_for_each_entry(trigger, &group->triggers, node)
+			seq_printf(m, "%s: %s threshold:%lluns window:%lluns\n", trigger->comm, trigger->state==PSI_MEM_SOME?"some":"full", trigger->threshold, trigger->win.size);
+	}
+
 	return 0;
 }
 

@@ -321,4 +321,7 @@ source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
 source "fs/unicode/Kconfig"
 
+# LG
+source "fs/Kconfig.lfs"
+
 endmenu

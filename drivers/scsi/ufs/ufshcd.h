@@ -602,6 +602,17 @@ struct debugfs_files {
 	u32 err_inj_scenario_mask;
 	struct fault_attr fail_attr;
 #endif
+
+#ifdef CONFIG_LFS_UFS
+    struct dentry *dump_config_desc;
+    struct dentry *dump_unit_desc;
+    struct dentry *dump_geo_desc;
+    struct dentry *dump_inter_desc;
+    struct dentry *dump_power_desc;
+    struct dentry *dump_string_desc;
+    struct dentry *dump_health_desc;
+#endif
+
 };
 
 /* tag stats statistics types */
@@ -842,6 +853,11 @@ struct ufs_hba {
 	int spm_lvl;
 	struct device_attribute rpm_lvl_attr;
 	struct device_attribute spm_lvl_attr;
+
+#ifdef CONFIG_LFS_UFS_SYSFS_COMMON
+	struct device_attribute health_desc_attr;
+#endif
+
 	int pm_op_in_progress;
 
 	/* Auto-Hibernate Idle Timer register value */
@@ -1114,6 +1130,11 @@ struct ufs_hba {
 
 	bool phy_init_g4;
 	bool force_g4;
+
+#ifdef CONFIG_LFS_UFSDBG_TUNABLES
+	void *ufsdbg_tunables;
+#endif
+
 	bool wb_enabled;
 
 #ifdef CONFIG_SCSI_UFS_CRYPTO
@@ -1350,6 +1371,15 @@ out:
 }
 
 int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size);
+
+#ifdef CONFIG_LFS_UFS
+int ufshcd_read_geo_desc(struct ufs_hba *hba, u8 *buf, u32 size);
+int ufshcd_read_config_desc(struct ufs_hba *hba, u8 *buf, u32 size);
+int ufshcd_read_unit_desc(struct ufs_hba *hba, int u_index, u8 *buf, u32 size);
+int ufshcd_read_inter_desc(struct ufs_hba *hba, u8 *buf, u32 size);
+int ufshcd_read_power_desc(struct ufs_hba *hba, u8 *buf, u32 size);
+int ufshcd_read_health_desc(struct ufs_hba *hba, u8 *buf, u32 size);
+#endif
 
 static inline bool ufshcd_is_hs_mode(struct ufs_pa_layer_attr *pwr_info)
 {

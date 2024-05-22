@@ -198,6 +198,10 @@ struct bio {
 #endif
 	};
 
+#ifdef CONFIG_LFS_IOSCHED_EXTENSION
+	unsigned short		bi_excontrol;
+#endif
+
 	unsigned short		bi_vcnt;	/* how many bio_vec's */
 
 	/*
@@ -346,6 +350,11 @@ enum req_flag_bits {
 	/* for driver use */
 	__REQ_DRV,
 	__REQ_SWAP,		/* swapping request. */
+
+#ifdef CONFIG_LFS_IOSCHED_CFQ_PREEMPT
+	__REQ_PREEMPT,
+#endif
+
 	__REQ_NR_BITS,		/* stops here */
 };
 
@@ -370,6 +379,10 @@ enum req_flag_bits {
 #define REQ_DRV			(1ULL << __REQ_DRV)
 #define REQ_SWAP		(1ULL << __REQ_SWAP)
 
+#ifdef CONFIG_LFS_IOSCHED_CFQ_PREEMPT
+#define REQ_PREEMPT		(1ULL << __REQ_PREEMPT)
+#endif
+
 #define REQ_FAILFAST_MASK \
 	(REQ_FAILFAST_DEV | REQ_FAILFAST_TRANSPORT | REQ_FAILFAST_DRIVER)
 
@@ -383,6 +396,15 @@ enum stat_group {
 
 	NR_STAT_GROUPS
 };
+
+#ifdef CONFIG_LFS_IOSCHED_EXTENSION
+#define __REQ_EX_MAX 15
+enum req_exflag_bits {
+	__REQ_EX_ORDERED,
+	__REQ_EX_NR_BITS = __REQ_EX_MAX,
+};
+#define REQ_EX_ORDERED (1 << __REQ_EX_ORDERED)
+#endif
 
 #define bio_op(bio) \
 	((bio)->bi_opf & REQ_OP_MASK)

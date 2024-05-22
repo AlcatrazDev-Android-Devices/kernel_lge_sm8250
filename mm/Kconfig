@@ -876,6 +876,36 @@ config PROCESS_RECLAIM
 
 	 Any other value is ignored.
 
+config CMA_PINPAGE_MIGRATION
+	bool "CMA pinned page migration (EXPERIMENTAL)"
+	default n
+	help
+	  Turns on cma page migration for pinned page.
+
+# LGE_S
+source "mm/Kconfig.lfs"
+
+config MIGRATE_HIGHORDER
+	bool "Enable migrate highorder"
+	default n
+	select ALLOC_BUFFERS_IN_4K_CHUNKS
+	help
+	  This option enables migratetype highorder.
+	  It creates the specific reserved pool for 4 and more order allocation    .
+	  This is helpful fragmentation and allocation success rate
+	  that system has too much high order allocation.
+
+config HIGHORDER_PAGES
+	int "Set migrate highorder pool size (pages)"
+	depends on MIGRATE_HIGHORDER
+	default 0
+	help
+	  Set the reserved size for migrate highorder.
+	  Normally, android system needs about 10% of total memory.
+	  (Thus, reserve 10% of memory if set to 0)
+	  Please check ION memory usage in your system.
+	  And, set this size about minimum (ION + extra) some memory.
+
 config FORCE_ALLOC_FROM_DMA_ZONE
 	bool "Force certain memory allocators to always return ZONE_DMA32 memory"
 	depends on ZONE_DMA32

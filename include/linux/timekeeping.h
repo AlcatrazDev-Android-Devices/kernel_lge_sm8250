@@ -290,6 +290,10 @@ void read_persistent_wall_and_boot_offset(struct timespec64 *wall_clock,
 					  struct timespec64 *boot_offset);
 extern int update_persistent_clock64(struct timespec64 now);
 
+#ifdef CONFIG_MACH_LGE
+struct timespec __current_kernel_time(void);
+#endif
+
 /*
  * deprecated aliases, don't use in new code
  */

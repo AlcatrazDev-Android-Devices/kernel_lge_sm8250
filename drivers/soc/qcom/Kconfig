@@ -876,6 +876,9 @@ config QMP_DEBUGFS_CLIENT
 	  This options enables a driver which allows clients to send messages
 	  to Alway On processor using QMP transport.
 
+
+source "drivers/soc/qcom/lge/Kconfig"
+
 config QCOM_CDSP_RM
 	bool "CDSP request manager"
 	depends on QCOM_GLINK
@@ -981,4 +984,5 @@ config ICNSS_QMI
 	  and configurations. It also send WLAN on/off control message to FW
 	  over QMI channel.
 
+source "drivers/soc/qcom/lge/Kconfig"
 source "drivers/soc/qcom/wcnss/Kconfig"
