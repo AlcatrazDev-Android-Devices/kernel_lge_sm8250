@@ -528,9 +528,11 @@ prune:
 	drm_modeset_acquire_fini(&ctx);
 
 	if (list_empty(&connector->modes)){
+#ifdef CONFIG_LGE_DISPLAY_COMMON
 		if(connector->connector_type == 10){
 			DRM_ERROR("mode count zero !!");
 		}
+#endif /* CONFIG_LGE_DISPLAY_COMMON */
 		return 0;
 	}
 	list_for_each_entry(mode, &connector->modes, head)

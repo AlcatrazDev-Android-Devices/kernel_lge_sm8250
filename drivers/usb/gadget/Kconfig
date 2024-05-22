@@ -645,6 +645,9 @@ config USB_CONFIGFS_F_PTP
 	  at the file level. Thus exposing the relevant content but hiding
 	  the system/restricted files.
 
+config LGE_USB_SUPPORT_SUPERSPEED
+	bool "LGE USB superspeed support"
+
 source "drivers/usb/gadget/legacy/Kconfig"
 
 endif # USB_GADGET

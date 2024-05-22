@@ -81,9 +81,11 @@ struct dst_entry {
 	int			__use;
 	unsigned long		lastuse;
 	struct lwtunnel_state   *lwtstate;
+#ifdef CONFIG_XFRM_FRAG_ESP_BEFORE_TUNNEL_ENC
 	/* 2018-03-16 gihong.jang@lge.com LGP_DATA_KERNEL_XFRM_FRAG_ESP [START]*/
 	struct dst_entry	*next;
 	/* 2018-03-16 gihong.jang@lge.com LGP_DATA_KERNEL_XFRM_FRAG_ESP [END]*/
+#endif /* CONFIG_XFRM_FRAG_ESP_BEFORE_TUNNEL_ENC */
 	struct rcu_head		rcu_head;
 	short			error;
 	short			__pad;

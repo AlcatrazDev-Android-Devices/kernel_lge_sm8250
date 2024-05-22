@@ -99,3 +99,7 @@ config ION_DEBUGGING_PROCFS
 	help
 	  Choose this option to debug with /proc/ioninfo. R OS doesn't support debugfs
 	  and need to debug ion memory. Instead of debugfs, procfs will be added.
+
+config ION_DEBUGGING_LGE_EXTN_DEBUGFS
+	bool "ion debugging with more info in debugfs"
+	depends on ION

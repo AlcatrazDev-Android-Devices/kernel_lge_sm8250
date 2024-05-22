@@ -448,9 +448,22 @@ config SCHED_WALT
 	used to guide task placement as well as task frequency requirements
 	for cpufreq governors.
 
+config SCHED_MULTI_STEP_BOOST
+	bool "LGE CPU multi step boost function"
+	depends on SMP
+
 config SCHED_CAS
 	bool "Context aware"
-	depends on SMP
+	depends on SMP && SCHED_MULTI_STEP_BOOST
+
+config LGE_SCHED_USERSPACE_FASTSWITCH_SWITCH
+	bool "Control cpu fast switch feature from userspace"
+
+config LGE_SCHED_SHOW_PSI_MEM_TRIGGER_LOG
+	bool "If PSI_MEM, show the trigger condition"
+
+config LGE_WORKQUEUE_WATCHDOG_TUNE
+	bool "LGE tune workqueue watchdog"
 
 config HAVE_SCHED_AVG_IRQ
 	def_bool y

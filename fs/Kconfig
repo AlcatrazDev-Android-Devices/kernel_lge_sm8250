@@ -324,4 +324,10 @@ source "fs/unicode/Kconfig"
 # LG
 source "fs/Kconfig.lfs"
 
+config LGE_COREDUMP_FORMAT
+	bool "LGE coredump format"
+
+config LGE_READAHEAD_FROM_BOOT_PROFILING
+	bool "LGE use mmap boot profiling val for fs readahead"
+
 endmenu

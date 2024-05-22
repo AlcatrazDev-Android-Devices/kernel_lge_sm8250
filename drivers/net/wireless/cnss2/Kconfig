@@ -84,3 +84,6 @@ config CNSS_QCA6490
 	  CNSS QCA6490 chipset.
 	  These changes are needed to support the new hardware architecture
 	  for CNSS QCA6490 chipset.
+
+config LGE_CNSS_FIRMWARE_OVERRIDE
+	bool "LGE cnss firmware load override"

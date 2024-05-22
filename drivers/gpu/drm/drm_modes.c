@@ -950,7 +950,10 @@ EXPORT_SYMBOL(drm_mode_duplicate);
 static bool drm_mode_match_timings(const struct drm_display_mode *mode1,
 				   const struct drm_display_mode *mode2)
 {
-	//pr_err("[GSGS] mode1->vrefresh = %d\n", mode1->vrefresh == mode2->vrefresh);
+#ifndef CONFIG_LGE_DISPLAY_COMMON
+	pr_err("[GSGS] mode1->vrefresh = %d\n", mode1->vrefresh == mode2->vrefresh);
+#endif /* CONFIG_LGE_DISPLAY_COMMON */
+
 	return mode1->hdisplay == mode2->hdisplay &&
 		mode1->hsync_start == mode2->hsync_start &&
 		mode1->hsync_end == mode2->hsync_end &&
