@@ -574,9 +574,11 @@ static void msm_restart_prepare(const char *cmd)
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 #endif
 
+#ifdef CONFIG_MACH_LGE
 	/*  default normal and re-write in each case again
 	 *  this is for removing the human error */
 	__raw_writel(0x77665501, restart_reason);
+#endif /* CONFIG_MACH_LGE */
 
 	if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
@@ -617,6 +619,7 @@ static void msm_restart_prepare(const char *cmd)
 								PON_RESTART_REASON_LCD_OFF);
 				__raw_writel(0x77665562, restart_reason);
 #endif
+#ifdef CONFIG_MACH_LGE
 		} else if (!strncmp(cmd, "opid mismatched", 15)) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_OPID_MISMATCHED);
@@ -649,6 +652,7 @@ static void msm_restart_prepare(const char *cmd)
 		   qpnp_pon_set_restart_reason(
 				 PON_RESTART_REASON_APDP_SDCARD);
 		   __raw_writel(0x7766556A, restart_reason);
+#endif /* CONFIG_MACH_LGE */
 		} else if (!strncmp(cmd, "oem-", 4)) {
 			unsigned long code;
 			int ret;
@@ -666,14 +670,17 @@ static void msm_restart_prepare(const char *cmd)
 		} else if (!strncmp(cmd, "edl", 3)) {
 			enable_emergency_dload_mode();
 #endif
+#ifdef CONFIG_MACH_LGE
 		} else if (!strncmp(cmd, "", 1)) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_NORMAL);
 			__raw_writel(0x77665501, restart_reason);
-
+#endif /* CONFIG_MACH_LGE */
 		} else {
+#ifdef CONFIG_MACH_LGE
 			qpnp_pon_set_restart_reason(
 					PON_RESTART_REASON_NORMAL);
+#endif /* CONFIG_MACH_LGE */
 			__raw_writel(0x77665501, restart_reason);
 		}
 	}
@@ -790,8 +797,11 @@ static void do_msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	 * Trigger a watchdog bite here and if this fails,
 	 * device will take the usual restart path.
 	 */
-
+#ifdef CONFIG_LGE_HANDLE_PANIC
 	if (WDOG_BITE_ON_PANIC && in_panic && restart_mode != RESTART_DLOAD)
+#else
+	if (WDOG_BITE_ON_PANIC && in_panic)
+#endif /* CONFIG_LGE_HANDLE_PANIC */
 		msm_trigger_wdog_bite();
 
 	scm_disable_sdi();

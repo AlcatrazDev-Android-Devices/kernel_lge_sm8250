@@ -145,7 +145,9 @@ enum bug_trap_type report_bug(unsigned long bugaddr, struct pt_regs *regs)
 	struct bug_entry *bug;
 	const char *file;
 	unsigned line, warning, once, done;
+#ifdef CONFIG_MACH_LGE
 	static int report_once;
+#endif /* CONFIG_MACH_LGE */
 
 	if (!is_valid_bugaddr(bugaddr))
 		return BUG_TRAP_TYPE_NONE;
@@ -186,8 +188,10 @@ enum bug_trap_type report_bug(unsigned long bugaddr, struct pt_regs *regs)
 		return BUG_TRAP_TYPE_WARN;
 	}
 
+#ifdef CONFIG_MACH_LGE
 	if (report_once)
 		return BUG_TRAP_TYPE_BUG;
+#endif /* CONFIG_MACH_LGE */
 
 	printk(KERN_DEFAULT CUT_HERE);
 
@@ -197,7 +201,9 @@ enum bug_trap_type report_bug(unsigned long bugaddr, struct pt_regs *regs)
 		pr_crit("Kernel BUG at %pB [verbose debug info unavailable]\n",
 			(void *)bugaddr);
 
+#ifdef CONFIG_MACH_LGE
 	report_once++;
+#endif /* CONFIG_MACH_LGE */
 	return BUG_TRAP_TYPE_BUG;
 }
 

@@ -423,7 +423,11 @@ static int mdm_handle_boot_fail(struct esoc_clink *esoc_clink, u8 *pon_trial)
 		break;
 	case BOOT_FAIL_ACTION_PANIC:
 		esoc_mdm_log("Calling panic!!\n");
+
+#ifdef CONFIG_MACH_LGE
 		msleep(20000);
+#endif
+
 #ifdef CONFIG_LGE_HANDLE_PANIC
 		lge_set_subsys_crash_reason("esoc0", LGE_ERR_SUB_PWR);
 #endif

@@ -1396,7 +1396,10 @@ static int dma_buf_debug_show(struct seq_file *s, void *unused)
 		}
 		rcu_read_unlock();
 
-//		seq_puts(s, "\tAttached Devices:\n");
+#ifndef CONFIG_LGE_SUPPRESS_DMA_PRINT
+		seq_puts(s, "\tAttached Devices:\n");
+#endif
+
 		attach_count = 0;
 
 		list_for_each_entry(attach_obj, &buf_obj->attachments, node) {
@@ -1404,8 +1407,10 @@ static int dma_buf_debug_show(struct seq_file *s, void *unused)
 			attach_count++;
 		}
 
-//		seq_printf(s, "Total %d devices attached\n\n",
-//				attach_count);
+#ifndef CONFIG_LGE_SUPPRESS_DMA_PRINT
+		seq_printf(s, "Total %d devices attached\n\n",
+				attach_count);
+#endif
 
 		dma_buf_ref_show(s, buf_obj);
 

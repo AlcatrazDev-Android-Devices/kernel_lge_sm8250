@@ -8177,8 +8177,12 @@ static int dev_new_index(struct net *net)
 	int ifindex = net->ifindex;
 
 	for (;;) {
+#ifdef CONFIG_MACH_LGE
         // LGE_CHANGE, add reset iface index condition when exceeded 1000 over(CN#04056525), 2019-06-26, ella.hwang@lge.com
 		if (++ifindex <= 0 || ifindex >= 1000)
+#else
+		if (++ifindex <= 0)
+#endif /* CONFIG_MACH_LGE */
 			ifindex = 1;
 		if (!__dev_get_by_index(net, ifindex))
 			return net->ifindex = ifindex;

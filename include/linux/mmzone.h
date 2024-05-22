@@ -240,21 +240,22 @@ static inline int is_active_lru(enum lru_list lru)
 	return (lru == LRU_ACTIVE_ANON || lru == LRU_ACTIVE_FILE);
 }
 
-/*
- * This tracks cost of reclaiming one LRU type - file or anon - over
- * the other. As the observed cost of pressure on one type increases,
- * the scan balance in vmscan.c tips toward the other type.
- *
- * The recorded cost for anon is in numer[0], file in numer[1].
- */
-struct lru_cost {
-	unsigned long           numer[2];
-	unsigned long           denom;
+struct zone_reclaim_stat {
+	/*
+	 * The pageout code in vmscan.c keeps track of how many of the
+	 * mem/swap backed and file backed pages are referenced.
+	 * The higher the rotated/scanned ratio, the more valuable
+	 * that cache is.
+	 *
+	 * The anon LRU stats live in [0], file LRU stats in [1]
+	 */
+	unsigned long		recent_rotated[2];
+	unsigned long		recent_scanned[2];
 };
 
 struct lruvec {
 	struct list_head		lists[NR_LRU_LISTS];
-	struct lru_cost			balance;
+	struct zone_reclaim_stat	reclaim_stat;
 	/* Evictions & activations on the inactive file list */
 	atomic_long_t			inactive_age;
 	/* Refaults at the time of last reclaim cycle */

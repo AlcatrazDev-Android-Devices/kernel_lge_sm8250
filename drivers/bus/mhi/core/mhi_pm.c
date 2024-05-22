@@ -1008,7 +1008,10 @@ int mhi_async_power_up(struct mhi_controller *mhi_cntrl)
 	current_ee = mhi_get_exec_env(mhi_cntrl);
 	write_unlock_irq(&mhi_cntrl->pm_lock);
 
+#ifdef CONFIG_MHI_LGE_PRINT_SFR
 	MHI_ERR("Current EE : %s\n", TO_MHI_EXEC_STR(current_ee));
+#endif /* CONFIG_MHI_LGE_PRINT_SFR */
+
 	/* confirm device is in valid exec env */
 	if (!MHI_IN_PBL(current_ee) && current_ee != MHI_EE_AMSS) {
 		MHI_CNTRL_ERR("Not a valid EE for power on:%s\n",
@@ -1046,6 +1049,7 @@ error_dev_ctxt:
 }
 EXPORT_SYMBOL(mhi_async_power_up);
 
+#ifdef CONFIG_MHI_LGE_PRINT_SFR
 // LGP_MODEMBSP_SFR For SFR display
 #ifndef SYS_M_SFR_LENGTH
 #define SYS_M_SFR_LENGTH 90
@@ -1067,6 +1071,7 @@ void mhi_print_sfr(void)
 }
 EXPORT_SYMBOL(mhi_print_sfr);
 // LGP_MODEMBSP_SFR For SFR display
+#endif /* CONFIG_MHI_LGE_PRINT_SFR */
 
 /* Transition MHI into error state and notify critical clients */
 void mhi_control_error(struct mhi_controller *mhi_cntrl)
@@ -1083,6 +1088,8 @@ void mhi_control_error(struct mhi_controller *mhi_cntrl)
 		memcpy(sfr_info->str, sfr_info->buf_addr, sfr_info->len);
 		MHI_CNTRL_ERR("mhi:%s sfr: %s\n", mhi_cntrl->name,
 				sfr_info->buf_addr);
+
+#ifdef CONFIG_MHI_LGE_PRINT_SFR
 		// LGP_MODEMBSP_SFR For SFR display
 		sfr_len = sfr_info->len;
 		if (sfr_info->len >= SYS_M_SFR_LENGTH-1)
@@ -1094,6 +1101,8 @@ void mhi_control_error(struct mhi_controller *mhi_cntrl)
 		ptr_sfr[sfr_len] = '\0';
 
 		// LGP_MODEMBSP_SFR For SFR display
+#endif /* CONFIG_MHI_LGE_PRINT_SFR */
+
 	}
 
 	/* link is not down if device supports RDDM */

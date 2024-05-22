@@ -34,6 +34,7 @@
 
 #include "internal.h"
 
+#ifdef CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING
 /* LGE_CHANGE_S
  *
  * do read/mmap profiling during booting
@@ -43,6 +44,7 @@
  */
 #include "sreadahead_prof.h"
 /* LGE_CHAGE_E */
+#endif /* CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING */
 
 int do_truncate2(struct vfsmount *mnt, struct dentry *dentry, loff_t length,
 		unsigned int time_attrs, struct file *filp)
@@ -1111,6 +1113,7 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 		} else {
 			fsnotify_open(f);
 			fd_install(fd, f);
+#ifdef CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING
 			/* LGE_CHANGE_S
 			*
 			* do read/mmap profiling during booting
@@ -1120,6 +1123,7 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 			*/
 			sreadahead_prof( f, 0, 0);
 			/* LGE_CHANGE_E */
+#endif /* CONFIG_LGE_READAHEAD_FROM_BOOT_PROFILING */
 		}
 	}
 	putname(tmp);

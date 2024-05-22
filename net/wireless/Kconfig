@@ -250,3 +250,6 @@ config LIB80211_DEBUG
 	  from lib80211.
 
 	  If unsure, say N.
+
+config LGE_WIRELESS_SCAN_PATCH
+	bool "LGE wireless scan patch"

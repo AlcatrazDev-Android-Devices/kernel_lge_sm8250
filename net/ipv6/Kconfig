@@ -336,4 +336,10 @@ config IPV6_SEG6_BPF
 	depends on IPV6_SEG6_LWTUNNEL
 	depends on IPV6 = y
 
+config LGE_DATA_SET_OPERATOR_FOR_IPV6
+	bool "Set operator header for ipv6(VZW)"
+
+config LGE_DATA_TCPIP_DISABLE_ACCEPT_RA_DEFRTR
+	bool "Set operator disable accept RA def rt for ipv6(VZW)"
+
 endif # IPV6

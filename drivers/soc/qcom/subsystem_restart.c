@@ -1298,12 +1298,14 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		return 0;
 	}
 
+#ifdef CONFIG_LGE_FORCE_SSR_ON_CHARGE_LOGO
 	//#define LGP_MODEMBSP_MFG_PIF_DETECT : Force enable SSR on chargerlogo
 	if (lge_get_boot_mode() == LGE_BOOT_MODE_CHARGERLOGO) {
 		pr_err("Force SSR enable in case of chargerlogo boot.\n");
 		dev->restart_level = RESET_SUBSYS_COUPLED;
 	}
 	//#endif
+#endif /* CONFIG_LGE_FORCE_SSR_ON_CHARGE_LOGO */
 
 	switch (dev->restart_level) {
 

@@ -40,4 +40,8 @@ config DEBUG_DMA_BUF_REF
 	  matching the get/put call stacks.  This feature consumes extra memory
 	  in order to save the stack traces using STACKDEPOT.
 
+config LGE_SUPPRESS_DMA_PRINT
+	bool "Suppress the dma kernel log"
+	default y
+
 endmenu

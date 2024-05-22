@@ -2409,10 +2409,12 @@ static ssize_t fs_ready_store(struct device *dev,
 	int fs_ready = 0;
 	struct cnss_plat_data *plat_priv = dev_get_drvdata(dev);
 
+#ifdef CONFIG_LGE_CNSS_FIRMWARE_OVERRIDE
 	/* LGE_CHANGE_S, [protocol-wifi@lge.com], 191021, ignore wlan recovery when chargerlogo is started */
 	enum cnss_driver_state i;
 	unsigned long state;
 	/* LGE_CHANGE_E, [protocol-wifi@lge.com], 191021, ignore wlan recovery when chargerlogo is started */
+#endif /* CONFIG_LGE_CNSS_FIRMWARE_OVERRIDE */
 
 	if (sscanf(buf, "%du", &fs_ready) != 1)
 		return -EINVAL;
@@ -2447,6 +2449,7 @@ static ssize_t fs_ready_store(struct device *dev,
 				       0, NULL);
 	}
 
+#ifdef CONFIG_LGE_CNSS_FIRMWARE_OVERRIDE
 	/* LGE_CHANGE_S, [protocol-wifi@lge.com], 191021, ignore wlan recovery when chargerlogo is started */
 	if (fs_ready == 9) {
 		// clear all driver state
@@ -2459,6 +2462,7 @@ static ssize_t fs_ready_store(struct device *dev,
 		}
 	}
 	/* LGE_CHANGE_E, [protocol-wifi@lge.com], 191021, ignore wlan recovery when chargerlogo is started */
+#endif /* CONFIG_LGE_CNSS_FIRMWARE_OVERRIDE */
 
 	return count;
 }

@@ -10,13 +10,17 @@
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+#ifdef CONFIG_LGE_SCHED_USERSPACE_FASTSWITCH_SWITCH
 #define FS_FLAG_FILE              "/data/fast_switch"
+#endif /* CONFIG_LGE_SCHED_USERSPACE_FASTSWITCH_SWITCH */
 
 #include "sched.h"
 
 #include <linux/sched/cpufreq.h>
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
+
+#ifdef CONFIG_LGE_SCHED_USERSPACE_FASTSWITCH_SWITCH
 static unsigned int fs_fast_switch = 1;
 
 static void read_file(char *filename)
@@ -39,6 +43,7 @@ static void read_file(char *filename)
 
 	set_fs(old_fs);
 }
+#endif /* CONFIG_LGE_SCHED_USERSPACE_FASTSWITCH_SWITCH */
 
 struct sugov_tunables {
 	struct gov_attr_set	attr_set;
@@ -1232,15 +1237,19 @@ static int sugov_init(struct cpufreq_policy *policy)
 	unsigned long util;
 	int ret = 0;
 
+#ifdef CONFIG_LGE_SCHED_USERSPACE_FASTSWITCH_SWITCH
 	read_file(FS_FLAG_FILE);
+#endif /* CONFIG_LGE_SCHED_USERSPACE_FASTSWITCH_SWITCH */
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
 		return -EBUSY;
 
 	cpufreq_enable_fast_switch(policy);
 
+#ifdef CONFIG_LGE_SCHED_USERSPACE_FASTSWITCH_SWITCH
 	if(fs_fast_switch == 0)
 		cpufreq_disable_fast_switch(policy);
+#endif /* CONFIG_LGE_SCHED_USERSPACE_FASTSWITCH_SWITCH */
 	sg_policy = sugov_policy_alloc(policy);
 	if (!sg_policy) {
 		ret = -ENOMEM;

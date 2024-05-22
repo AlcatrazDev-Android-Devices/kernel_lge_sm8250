@@ -41,11 +41,11 @@ static const unsigned int highorders[] = {9, 4};
 
 struct ion_system_heap {
 	struct ion_heap heap;
-	struct ion_page_pool *uncached_pools[NUM_ORDERS];
-	struct ion_page_pool *cached_pools[NUM_ORDERS];
+	struct ion_page_pool *uncached_pools[MAX_ORDERS];
+	struct ion_page_pool *cached_pools[MAX_ORDERS];
 	/* worker threads to refill the pool */
 	struct task_struct *kworker[ION_MAX_NUM_KTHREADS];
-	struct ion_page_pool *secure_pools[VMID_LAST][NUM_ORDERS];
+	struct ion_page_pool *secure_pools[VMID_LAST][MAX_ORDERS];
 #ifdef CONFIG_MIGRATE_HIGHORDER
 	// must check this order size of pool
 	struct ion_page_pool *highorder_uncached_pools[NUM_HIGHORDERS];

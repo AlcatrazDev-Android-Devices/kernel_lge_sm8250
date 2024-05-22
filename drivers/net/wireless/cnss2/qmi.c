@@ -518,10 +518,11 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 
 	switch (bdf_type) {
 	case CNSS_BDF_ELF:
+#ifdef CONFIG_LGE_CNSS_FIRMWARE_OVERRIDE
 		/* LGE_CHANGE_S, [protocol-wifi@lge.com], use elf file only */
 		snprintf(filename, filename_len, ELF_BDF_FILE_NAME);
-#if 0 // qct original code
-		/* Board ID will be equal or less than 0xFF in GF mask case */
+		/* LGE_CHANGE_E, [protocol-wifi@lge.com], use elf file only */
+#else
 		if (plat_priv->board_info.board_id == 0xFF) {
 			if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK)
 				snprintf(filename_tmp, filename_len,
@@ -544,8 +545,7 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 				 plat_priv->board_info.board_id >> 8 & 0xFF,
 				 plat_priv->board_info.board_id & 0xFF);
 		}
-#endif
-		/* LGE_CHANGE_E, [protocol-wifi@lge.com], use elf file only */
+#endif /* CONFIG_LGE_CNSS_FIRMWARE_OVERRIDE */
 		break;
 	case CNSS_BDF_BIN:
 		if (plat_priv->board_info.board_id == 0xFF) {
@@ -586,9 +586,11 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 		break;
 	}
 
-	/* qct original code
+#ifndef CONFIG_LGE_CNSS_FIRMWARE_OVERRIDE
+	// qct original code
 	if (ret >= 0)
-		cnss_bus_add_fw_prefix_name(plat_priv, filename, filename_tmp); */
+		cnss_bus_add_fw_prefix_name(plat_priv, filename, filename_tmp);
+#endif /* CONFIG_LGE_CNSS_FIRMWARE_OVERRIDE */
 
 	return ret;
 }

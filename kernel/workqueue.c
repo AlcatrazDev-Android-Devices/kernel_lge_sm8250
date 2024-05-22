@@ -5598,7 +5598,11 @@ static void workqueue_sysfs_unregister(struct workqueue_struct *wq)	{ }
  */
 #ifdef CONFIG_WQ_WATCHDOG
 
+#ifdef CONFIG_MACH_LGE
 static unsigned long wq_watchdog_thresh = 60;
+#else
+static unsigned long wq_watchdog_thresh = 30;
+#endif /* CONFIG_MACH_LGE */
 static struct timer_list wq_watchdog_timer;
 
 static unsigned long wq_watchdog_touched = INITIAL_JIFFIES;
@@ -5669,7 +5673,9 @@ static void wq_watchdog_timer_fn(struct timer_list *unused)
 
 	if (lockup_detected) {
 		show_workqueue_state();
+#ifdef CONFIG_MACH_LGE
 		BUG();
+#endif /* CONFIG_MACH_LGE */
 	}
 
 	wq_watchdog_reset_touched();

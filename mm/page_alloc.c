@@ -8076,15 +8076,16 @@ static void __setup_per_zone_wmarks(void)
 		zone->_watermark[WMARK_LOW]  = min_wmark_pages(zone) +
 					low + min;
 
+#ifdef CONFIG_LGE_HSWAP
         // [LGE_S] PostCS1 Migration >>  LGE HSWAP Fix: Changed From "min * 2" to "min_wmark_pages(zone) * 2"
 		zone->_watermark[WMARK_HIGH] = min_wmark_pages(zone) * 2 +
 					low + min;
-
-        /* Original QCT source
+#else
+        // Original QCT source
 		zone->_watermark[WMARK_HIGH] = min_wmark_pages(zone) +
 					low + min * 2;
-        */
         // [LGE_E] PostCS1 Migration
+#endif /* CONFIG_LGE_HSWAP */
 
 		spin_unlock_irqrestore(&zone->lock, flags);
 	}
