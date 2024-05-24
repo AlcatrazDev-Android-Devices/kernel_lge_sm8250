@@ -72,7 +72,7 @@ COMMON_INC :=	-I$(AUDIO_ROOT)/$(COMMON_DIR)
 ifdef CONFIG_ARCH_LITO
 TFA9878_INC :=  -I$(TFA_SRC_DIR)/tfa9878_lito/inc
 else
-TFA9878_INC :=  -I$(TFA_SRC_DIR)/inc
+TFA9878_INC :=  -Itechpack/audio/asoc/codecs/tfa9878/inc
 endif
 ############ MSM Soundwire ############
 
