@@ -116,7 +116,7 @@ static int __migrate_cma_pinpage(struct page *page, struct vm_area_struct *vma)
 	} else {
 		spin_lock_irq(&zone->zone_pgdat->lru_lock);
 		lruvec = mem_cgroup_page_lruvec(page, zone->zone_pgdat);
-		del_page_from_lru_list(page, lruvec, page_lru(page));
+		del_page_from_lru_list(page, lruvec);
 		spin_unlock_irq(&zone->zone_pgdat->lru_lock);
 	}
 
